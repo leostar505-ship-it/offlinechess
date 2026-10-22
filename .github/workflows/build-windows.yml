@@ -47,6 +47,10 @@ jobs:
           Compress-Archive -Path desktop/release/full/OfflineChess-Portable-Full-*.exe -DestinationPath dist-out/Full_portable.zip
           Compress-Archive -Path desktop/release/lite/OfflineChess-Setup-Lite-*.exe -DestinationPath dist-out/Lite_suite.zip
           Compress-Archive -Path desktop/release/lite/OfflineChess-Portable-Lite-*.exe -DestinationPath dist-out/Lite_portable.zip
+          Compress-Archive -Path desktop/release/skeleton/OfflineChess-Setup-Skeleton-*.exe -DestinationPath dist-out/skeleton_suite.zip
+          Compress-Archive -Path desktop/release/skeleton/OfflineChess-Portable-Skeleton-*.exe -DestinationPath dist-out/skeleton_portable.zip
+          Copy-Item node_modules/stockfish/bin/stockfish-19-lite-single.js dist-out/
+          Copy-Item node_modules/stockfish/bin/stockfish-19-lite-single.wasm dist-out/
           Copy-Item node_modules/stockfish/bin/stockfish-19-single.js dist-out/
           Copy-Item node_modules/stockfish/bin/stockfish-19-single.wasm dist-out/
           Get-ChildItem dist-out | Select-Object Name, Length
@@ -61,6 +65,8 @@ jobs:
           target_commitish: ${{ github.sha }}
           body: Stockfish 19 engine files that the Lite editions download when you pick the full engine. You do not need these.
           files: |
+            dist-out/stockfish-19-lite-single.js
+            dist-out/stockfish-19-lite-single.wasm
             dist-out/stockfish-19-single.js
             dist-out/stockfish-19-single.wasm
 
@@ -97,3 +103,20 @@ jobs:
         run: |
           gh release delete-asset build-2 stockfish-19-single.js --yes
           gh release delete-asset build-2 stockfish-19-single.wasm --yes
+
+      - name: Publish hotfix release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-2.0.1
+          name: OfflineChess build 2.0.1 hotfix
+          prerelease: false
+          make_latest: true
+          target_commitish: ${{ github.sha }}
+          body: |
+            Small downloads. The app comes without a chess engine and downloads Stockfish 19 on first launch, so you need internet once.
+
+            skeleton_suite.zip - small installer, then pick Lite or Full engine on first launch
+            skeleton_portable.zip - small single exe, no install, pick Lite or Full engine on first launch
+          files: |
+            dist-out/skeleton_suite.zip
+            dist-out/skeleton_portable.zip

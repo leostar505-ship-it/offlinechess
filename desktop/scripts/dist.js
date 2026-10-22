@@ -7,8 +7,8 @@ const packageJson = require(path.join(desktopRoot, "package.json"));
 const version = packageJson.version;
 
 async function main() {
-    for (const edition of ["full", "lite"]) {
-        const label = edition === "full" ? "Full" : "Lite";
+    for (const edition of ["full", "lite", "skeleton"]) {
+        const label = edition.charAt(0).toUpperCase() + edition.slice(1);
 
         const prepared = spawnSync(
             process.execPath,

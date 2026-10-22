@@ -63,19 +63,22 @@ const allowedRemoteHosts = [
     /^lichess\.org$/
 ];
 
-function readBundledFullEngine() {
+function readEdition() {
     try {
-        const info = JSON.parse(
+        return JSON.parse(
             fs.readFileSync(path.join(appRoot, "public", "edition.json"), "utf8")
         );
-
-        return info.fullEngine !== false;
     } catch {
-        return true;
+        return { edition: "full", liteEngine: true, fullEngine: true };
     }
 }
 
-const bundledFullEngine = readBundledFullEngine();
+const editionInfo = readEdition();
+
+const bundledEngines = {
+    lite: editionInfo.liteEngine !== false,
+    full: editionInfo.fullEngine !== false
+};
 
 function userEngineDir() {
     return path.join(app.getPath("userData"), "engines");
@@ -148,20 +151,36 @@ function sendFile(res, filePath, isPage) {
 }
 
 function handleRequest(req, res) {
-    if (req.url === "/api/engine/full") {
+    const engineApi = /^\/api\/engine\/([a-z]+)$/.exec(req.url);
+
+    if (engineApi && engineDownload.isEngineName(engineApi[1])) {
+        const engineName = engineApi[1];
+
         if (!isSameOriginRequest(req)) {
             res.writeHead(403);
             return res.end();
         }
 
         if (req.method === "POST") {
-            engineDownload.start(userEngineDir());
+            engineDownload.start(engineName, userEngineDir());
         } else if (req.method !== "GET") {
             res.writeHead(405);
             return res.end();
         }
 
-        return sendJson(res, 200, engineDownload.getStatus(userEngineDir(), bundledFullEngine));
+        return sendJson(
+            res,
+            200,
+            engineDownload.getStatus(engineName, userEngineDir(), bundledEngines[engineName])
+        );
+    }
+
+    if (req.url === "/engine-setup") {
+        return sendFile(res, path.join(__dirname, "setup", "engine-setup.html"), true);
+    }
+
+    if (req.url === "/engine-setup.js") {
+        return sendFile(res, path.join(__dirname, "setup", "engine-setup.js"), false);
     }
 
     if (req.method !== "GET" && req.method !== "HEAD") {
@@ -332,7 +351,10 @@ function createWindow() {
         mainWindow = null;
     });
 
-    mainWindow.loadURL(origin + "/analysis");
+    const needsEngineSetup = !bundledEngines.lite
+        && !engineDownload.getStatus("lite", userEngineDir(), false).installed;
+
+    mainWindow.loadURL(origin + (needsEngineSetup ? "/engine-setup" : "/analysis"));
 }
 
 if (!app.requestSingleInstanceLock()) {

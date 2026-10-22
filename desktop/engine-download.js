@@ -5,34 +5,50 @@ const crypto = require("crypto");
 
 const BASE_URL = "https://github.com/leostar505-ship-it/offlinechess/releases/download/engine-data/";
 
-const FILES = [
-    {
-        name: "stockfish-19-single.js",
-        size: 28130,
-        sha256: "8071dee87312f74805a859de933e1a1ef465579ab1a51fbd597388cdce9d444d"
-    },
-    {
-        name: "stockfish-19-single.wasm",
-        size: 99169054,
-        sha256: "991bede2f253ebb08ff01fcc48270f4b9c8e66b12d5bd5f8d6f52eb3e3b3a740"
-    }
-];
+const ENGINES = {
+    lite: [
+        {
+            name: "stockfish-19-lite-single.js",
+            size: 28230,
+            sha256: "ccb130d7ff29408531c47d859a49f91d59d4f482d05a53eb1a3231a4f624c91a"
+        },
+        {
+            name: "stockfish-19-lite-single.wasm",
+            size: 1845971,
+            sha256: "ee4f115bdb2d32cadf96cada104a05b5ec257d7ad6f57582190b49bc71f096de"
+        }
+    ],
+    full: [
+        {
+            name: "stockfish-19-single.js",
+            size: 28130,
+            sha256: "8071dee87312f74805a859de933e1a1ef465579ab1a51fbd597388cdce9d444d"
+        },
+        {
+            name: "stockfish-19-single.wasm",
+            size: 99169054,
+            sha256: "991bede2f253ebb08ff01fcc48270f4b9c8e66b12d5bd5f8d6f52eb3e3b3a740"
+        }
+    ]
+};
 
 const allowedHosts = [
     /^github\.com$/,
     /(^|\.)githubusercontent\.com$/
 ];
 
-const totalSize = FILES.reduce((sum, file) => sum + file.size, 0);
+const states = {};
 
-const state = {
-    downloading: false,
-    received: 0,
-    error: null
-};
+for (const name of Object.keys(ENGINES)) {
+    states[name] = { downloading: false, received: 0, error: null };
+}
 
-function isInstalled(dir) {
-    return FILES.every(file => {
+function totalSize(name) {
+    return ENGINES[name].reduce((sum, file) => sum + file.size, 0);
+}
+
+function isInstalled(name, dir) {
+    return ENGINES[name].every(file => {
         try {
             return fs.statSync(path.join(dir, file.name)).size === file.size;
         } catch {
@@ -41,8 +57,12 @@ function isInstalled(dir) {
     });
 }
 
-function isEngineFile(name) {
-    return FILES.some(file => file.name === name);
+function isEngineName(name) {
+    return Object.prototype.hasOwnProperty.call(ENGINES, name);
+}
+
+function isEngineFile(fileName) {
+    return Object.values(ENGINES).some(files => files.some(file => file.name === fileName));
 }
 
 function fetchTo(url, dest, onBytes, redirects = 0) {
@@ -99,10 +119,12 @@ function fetchTo(url, dest, onBytes, redirects = 0) {
     });
 }
 
-async function runDownload(dir) {
+async function runDownload(name, dir) {
     fs.mkdirSync(dir, { recursive: true });
 
-    for (const file of FILES) {
+    const state = states[name];
+
+    for (const file of ENGINES[name]) {
         const finalPath = path.join(dir, file.name);
         const partPath = finalPath + ".part";
 
@@ -119,18 +141,20 @@ async function runDownload(dir) {
     }
 }
 
-function start(dir) {
-    if (state.downloading || isInstalled(dir)) return;
+function start(name, dir) {
+    const state = states[name];
+
+    if (state.downloading || isInstalled(name, dir)) return;
 
     state.downloading = true;
     state.received = 0;
     state.error = null;
 
-    runDownload(dir)
+    runDownload(name, dir)
         .catch(error => {
             state.error = error.message || "Download failed";
 
-            for (const file of FILES) {
+            for (const file of ENGINES[name]) {
                 fs.rmSync(path.join(dir, file.name + ".part"), { force: true });
             }
         })
@@ -139,15 +163,16 @@ function start(dir) {
         });
 }
 
-function getStatus(dir, bundled) {
-    const installed = bundled || isInstalled(dir);
+function getStatus(name, dir, bundled) {
+    const state = states[name];
+    const installed = bundled || isInstalled(name, dir);
 
     return {
         installed,
         downloading: state.downloading,
-        progress: installed ? 1 : Math.min(1, state.received / totalSize),
+        progress: installed ? 1 : Math.min(1, state.received / totalSize(name)),
         error: installed ? null : state.error
     };
 }
 
-module.exports = { start, getStatus, isEngineFile };
+module.exports = { start, getStatus, isEngineFile, isEngineName };

@@ -30,6 +30,7 @@
         "files": [
             "main.js",
             "engine-download.js",
+            "setup/**/*",
             "package.json",
             "build/icon.png",
             "app/**/*"
