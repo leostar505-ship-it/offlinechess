@@ -13,7 +13,8 @@
         "dist": "node scripts/dist.js",
         "dist:release": "node scripts/dist.js skeleton --plain",
         "dist:linux": "node scripts/dist.js skeleton --plain --linux",
-        "dist:alt": "node scripts/dist.js full lite"
+        "dist:alt": "node scripts/dist.js full lite",
+        "dist:alt-linux": "node scripts/dist.js full lite --linux"
     },
     "devDependencies": {
         "electron": "45.0.0",
