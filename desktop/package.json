@@ -14,7 +14,8 @@
     },
     "devDependencies": {
         "electron": "45.0.0",
-        "electron-builder": "26.15.3"
+        "electron-builder": "26.15.3",
+        "stockfish": "19.0.1"
     },
     "build": {
         "appId": "com.offlinechess.app",

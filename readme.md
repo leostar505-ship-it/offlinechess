@@ -1,17 +1,17 @@
 # OfflineChess
 
-A Windows desktop version of [WintrChess](https://github.com/WintrCat/wintrchess) game analysis with no ads, no analytics and no account system. Everything runs on your own computer: Stockfish 17 evaluates the positions in the app and the move classifications (brilliant, great, blunder and so on) are computed locally.
+A Windows desktop version of [WintrChess](https://github.com/WintrCat/wintrchess) game analysis with no ads, no analytics and no account system. Everything runs on your own computer: Stockfish 19 evaluates the positions in the app and the move classifications (brilliant, great, blunder and so on) are computed locally.
 
 The only network use is looking up games by username on Chess.com (and Lichess). Every other outgoing request is blocked by the app.
 
 ## Download
 
-Open the **Actions** tab, pick the latest successful "Build Windows app" run and download:
+Go to the **Releases** page on the right of this repository and download the newest build:
 
-- `OfflineChess-Setup` - installer, adds a desktop shortcut and a Start menu entry
-- `OfflineChess-Portable` - single .exe, nothing to install
+- `OfflineChess-Setup-1.0.0.exe` - the installer. Run it and it installs everything, adds a desktop shortcut and a Start menu entry. Nothing else needs to be installed first.
+- `OfflineChess-Portable-1.0.0.exe` - the same app as a single file you can run from anywhere, nothing to install.
 
-Windows SmartScreen will warn about an unknown publisher because the app is not code signed. Choose "More info", then "Run anyway".
+Windows SmartScreen will warn about an unknown publisher because the app is not code signed. Click "More info", then "Run anyway".
 
 ## What changed from WintrChess
 
@@ -19,19 +19,8 @@ Windows SmartScreen will warn about an unknown publisher because the app is not 
 - Server, database, captcha, accounts, news, archive and the internal dashboard removed
 - Game report generation moved into the client
 - Lichess cloud evaluations switched off so analysis is fully local
+- Stockfish upgraded from 17 to 19
 - Electron wrapper serving the app from a loopback-only server, with a network allowlist
-
-## Build it yourself
-
-Requires Node.js 22 or later.
-
-```sh
-npm install
-npm run build
-npm run desktop:dev
-```
-
-Windows installers are built by the GitHub Actions workflow, or locally on Windows with `npm run desktop:dist` (output in `desktop/release`).
 
 ## Changing the icon
 

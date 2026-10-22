@@ -45,7 +45,7 @@ export const defaultSettings: Settings = {
     analysis: {
         engine: {
             enabled: true,
-            version: EngineVersion.STOCKFISH_17_LITE,
+            version: EngineVersion.STOCKFISH_19_LITE,
             depth: 16,
             lines: 2,
             timeLimitEnabled: false,
@@ -80,7 +80,13 @@ function fetchSettings() {
     if (value == null) return defaultSettingsCopy;
 
     try {
-        return merge(defaultSettingsCopy, JSON.parse(value));
+        const merged = merge(defaultSettingsCopy, JSON.parse(value));
+
+        if (!Object.values(EngineVersion).includes(merged.analysis.engine.version)) {
+            merged.analysis.engine.version = defaultSettings.analysis.engine.version;
+        }
+
+        return merged;
     } catch {
         return defaultSettingsCopy;
     }
