@@ -35,8 +35,7 @@ const settingsSchema = z.object({
             lightSquareColour: z.string().regex(/^#.{6}$/)
         }),
         piece: z.string()
-    }),
-    bugReportingMode: z.boolean()
+    })
 });
 
 type Settings = z.infer<typeof settingsSchema>;
@@ -70,8 +69,7 @@ export const defaultSettings: Settings = {
             lightSquareColour: "#f0d9b5"
         },
         piece: ""
-    },
-    bugReportingMode: false
+    }
 };
 
 function fetchSettings() {

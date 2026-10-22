@@ -2,10 +2,8 @@ import { StatusCodes } from "http-status-codes";
 import { clone } from "lodash-es";
 
 import AnalysisOptions from "shared/lib/reporter/types/AnalysisOptions";
-import {
-    GameAnalysis,
-    SerializedGameAnalysis
-} from "shared/types/game/GameAnalysis";
+import { getGameAnalysis } from "shared/lib/reporter/report";
+import { GameAnalysis } from "shared/types/game/GameAnalysis";
 import {
     StateTreeNode,
     serializeNode,
@@ -13,40 +11,36 @@ import {
 } from "shared/types/game/position/StateTreeNode";
 import APIResponse from "@/types/APIResponse";
 
+function yieldToUI() {
+    return new Promise<void>(res => setTimeout(res, 0));
+}
+
 export async function analyseStateTree(
     rootNode: StateTreeNode,
     options?: AnalysisOptions
 ): APIResponse<{ gameAnalysis: GameAnalysis }> {
-    const reportURL = "/api/analysis/analyse"
-        + `?brilliant=${String(options?.includeBrilliant)}`
-        + `&critical=${String(options?.includeCritical)}`
-        + `&theory=${String(options?.includeTheory)}`;
+    await yieldToUI();
 
-    const reportResponse = await fetch(reportURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-            serializeNode(rootNode)
-        )
-    });
+    try {
+        const copiedTree = deserializeNode(serializeNode(rootNode), undefined);
 
-    if (!reportResponse.ok)
-        return { status: reportResponse.status };
+        const gameAnalysis = getGameAnalysis(copiedTree, options);
 
-    const serializedAnalysis: SerializedGameAnalysis = (
-        await reportResponse.json()
-    );
+        return {
+            status: StatusCodes.OK,
+            gameAnalysis: {
+                ...gameAnalysis,
+                stateTree: deserializeNode(
+                    serializeNode(gameAnalysis.stateTree),
+                    rootNode
+                )
+            }
+        };
+    } catch (error) {
+        console.error(error);
 
-    return {
-        status: reportResponse.status,
-        gameAnalysis: {
-            ...serializedAnalysis,
-            stateTree: deserializeNode(
-                serializedAnalysis.stateTree,
-                rootNode
-            )
-        }
-    };
+        return { status: StatusCodes.INTERNAL_SERVER_ERROR };
+    }
 }
 
 export async function analyseNode(

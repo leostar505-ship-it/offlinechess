@@ -32,7 +32,6 @@ function useEvaluateGame() {
             engineDepth: settings.depth,
             engineTimeLimit: settings.timeLimitEnabled
                 ? settings.timeLimit : undefined,
-            cloudEngineLines: settings.lines,
             maxEngineCount: 4,
             engineConfig: engine => engine.setLineCount(settings.lines),
             onProgress: progress => {
@@ -43,7 +42,7 @@ function useEvaluateGame() {
 
         evaluator.evaluate()
             .then(() => setAnalysisStatus(
-                AnalysisStatus.AWAITING_CAPTCHA
+                AnalysisStatus.CLASSIFYING
             ))
             .catch(err => {
                 if (err == "abort") return;

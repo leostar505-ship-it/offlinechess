@@ -1,0 +1,74 @@
+{
+    "name": "desktop",
+    "productName": "OfflineChess",
+    "version": "1.0.0",
+    "description": "OfflineChess - WintrChess analysis as a local desktop app, no ads",
+    "author": "leostar505",
+    "license": "GPL-3.0-only",
+    "private": true,
+    "main": "main.js",
+    "scripts": {
+        "prepare-app": "node scripts/prepare.js",
+        "start": "node scripts/prepare.js && electron .",
+        "dist": "node scripts/prepare.js && electron-builder --win nsis portable --x64 --publish never"
+    },
+    "devDependencies": {
+        "electron": "45.0.0",
+        "electron-builder": "26.15.3"
+    },
+    "build": {
+        "appId": "com.offlinechess.app",
+        "productName": "OfflineChess",
+        "copyright": "GPL-3.0, based on WintrChess",
+        "asar": true,
+        "compression": "normal",
+        "directories": {
+            "output": "release",
+            "buildResources": "build"
+        },
+        "files": [
+            "main.js",
+            "package.json",
+            "build/icon.png",
+            "app/**/*"
+        ],
+        "win": {
+            "icon": "build/icon.ico",
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                },
+                {
+                    "target": "portable",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ]
+        },
+        "nsis": {
+            "oneClick": false,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": "always",
+            "createStartMenuShortcut": true,
+            "shortcutName": "OfflineChess",
+            "runAfterFinish": true,
+            "deleteAppDataOnUninstall": false,
+            "installerIcon": "build/icon.ico",
+            "uninstallerIcon": "build/icon.ico",
+            "installerHeaderIcon": "build/icon.ico",
+            "artifactName": "OfflineChess-Setup-${version}.exe"
+        },
+        "portable": {
+            "artifactName": "OfflineChess-Portable-${version}.exe"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/leostar505-ship-it/offlinechess.git"
+    }
+}

@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import Typography from "@/components/Typography";
 import Dialog from "@/components/common/Dialog";
 import LoadingPlaceholder from "../LoadingPlaceholder";
-import { manageDataConsent } from "@/lib/consent";
 
 import FooterProps from "./FooterProps";
 import * as styles from "./Footer.module.css";
@@ -20,7 +19,7 @@ function LoadingDialog() {
 }
 
 function Footer({ className, style }: FooterProps) {
-    const { t } = useTranslation(["common", "helpCenter"]);
+    const { t } = useTranslation("common");
 
     const copyrightYear = useMemo(() => (
         new Date().getFullYear()
@@ -40,24 +39,16 @@ function Footer({ className, style }: FooterProps) {
             />
 
             <span className={styles.copyrightNotice}>
-                Copyright © {copyrightYear} wintrchess.com
+                OfflineChess {copyrightYear}
             </span>
 
             <span className={styles.copyrightNotice}>
-                All rights reserved
+                Based on WintrChess, GPLv3
             </span>
         </div>
 
         <div className={styles.links}>
             <div className={styles.section}>
-                <a href="/help">
-                    {t("title", { ns: "helpCenter" })}
-                </a>
-
-                <span className={styles.link} onClick={manageDataConsent}>
-                    {t("footer.privacySettings")}
-                </span>
-
                 <span
                     className={styles.link}
                     onClick={() => setLanguagesOpen(true)}
@@ -67,14 +58,6 @@ function Footer({ className, style }: FooterProps) {
             </div>
 
             <div className={styles.section}>
-                <a href="/terms">
-                    {t("footer.termsOfService")}
-                </a>
-
-                <a href="/privacy">
-                    {t("footer.privacyPolicy")}
-                </a>
-
                 <a href="https://github.com/WintrCat/wintrchess">
                     {t("footer.openSource")}
                 </a>

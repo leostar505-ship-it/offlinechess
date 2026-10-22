@@ -4,3 +4,5 @@ node_modules
 .vs
 .VSCodeCounter
 .vscode
+desktop/app
+desktop/release

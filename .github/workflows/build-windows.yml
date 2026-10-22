@@ -1,0 +1,62 @@
+name: Build Windows app
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+      - desktop-app
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Package Windows installer and portable exe
+        run: npm run dist -w desktop
+
+      - name: List output
+        run: Get-ChildItem desktop/release -Filter *.exe | Select-Object Name, Length
+        shell: pwsh
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: OfflineChess-Setup
+          path: desktop/release/OfflineChess-Setup-*.exe
+          if-no-files-found: error
+
+      - name: Upload portable
+        uses: actions/upload-artifact@v4
+        with:
+          name: OfflineChess-Portable
+          path: desktop/release/OfflineChess-Portable-*.exe
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            desktop/release/OfflineChess-Setup-*.exe
+            desktop/release/OfflineChess-Portable-*.exe

@@ -1,15 +1,15 @@
 {
     "workspaces": [
         "./shared",
-        "./server",
-        "./client"
+        "./client",
+        "./desktop"
     ],
     "scripts": {
-        "start": "node server/dist/index.js",
-        "build": "npm run build --workspaces --if-present",
-        "bbuild": "npm run build -w shared && npm run build -w server",
-        "dev": "npm run build && npm start",
-        "lint": "eslint ."
+        "build": "npm run build -w shared && npm run build -w client",
+        "check": "npm run check -w client",
+        "lint": "eslint .",
+        "desktop:dev": "npm run build && npm run start -w desktop",
+        "desktop:dist": "npm run build && npm run dist -w desktop"
     },
     "devDependencies": {
         "@stylistic/eslint-plugin-ts": "^2.1.0",
@@ -17,5 +17,7 @@
         "typescript": "^5.4.5",
         "typescript-eslint": "^7.12.0",
         "webpack-bundle-analyzer": "^4.10.2"
-    }
+    },
+    "name": "offlinechess",
+    "private": true
 }

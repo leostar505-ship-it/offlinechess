@@ -1,44 +1,42 @@
-> [!IMPORTANT]
-> Looking for maintainers! Please join [the Discord server](https://discord.com/invite/XxtsAzPyCb) and open a ticket to apply :)
+# OfflineChess
 
-<h1 align="center">
-    <a href="https://wintrchess.com"><img width="175" src="https://github.com/user-attachments/assets/9a33a746-c9cd-43b8-b17b-564f3f6ce4a2" /></a>
-    <br>
-    WintrChess
-</h1>
+A Windows desktop version of [WintrChess](https://github.com/WintrCat/wintrchess) game analysis with no ads, no analytics and no account system. Everything runs on your own computer: Stockfish 17 evaluates the positions in the app and the move classifications (brilliant, great, blunder and so on) are computed locally.
 
-<p align="center">
-    A website that analyses Chess games with move classifications, for free.
-</p>
+The only network use is looking up games by username on Chess.com (and Lichess). Every other outgoing request is blocked by the app.
 
-<p align="center">
-    📌 <a href="https://wintrchess.com/"><b>wintrchess.com</b></a>
-</p>
+## Download
 
-<img width="1000" alt="image" src="https://github.com/user-attachments/assets/77d98631-07d4-4ccc-83ef-32f6b3e1d6dd" />
+Open the **Actions** tab, pick the latest successful "Build Windows app" run and download:
 
-> Originally <a href="https://github.com/wintrcat/freechess">Game Report</a>, the platform has been rebuilt with many more features!
+- `OfflineChess-Setup` - installer, adds a desktop shortcut and a Start menu entry
+- `OfflineChess-Portable` - single .exe, nothing to install
 
-## 📂 Project
+Windows SmartScreen will warn about an unknown publisher because the app is not code signed. Choose "More info", then "Run anyway".
 
-The WintrChess repository is a monorepo made up of three packages:
+## What changed from WintrChess
 
-#### `client`
-The frontend for the website built with React and TypeScript.
+- Ad scripts, Google Analytics, consent popups and the Ko-fi button removed
+- Server, database, captcha, accounts, news, archive and the internal dashboard removed
+- Game report generation moved into the client
+- Lichess cloud evaluations switched off so analysis is fully local
+- Electron wrapper serving the app from a loopback-only server, with a network allowlist
 
-#### `server`
-The backend for the website where the website content is served, and where any API endpoints will live.
+## Build it yourself
 
-#### `shared`
-Libraries, some types and common logic is stored here and can be accessed by both other packages.
+Requires Node.js 22 or later.
 
-## 📚 Documentation
+```sh
+npm install
+npm run build
+npm run desktop:dev
+```
 
-[Hosting WintrChess locally](https://github.com/WintrCat/wintrchess/blob/master/docs/hosting.md)
+Windows installers are built by the GitHub Actions workflow, or locally on Windows with `npm run desktop:dist` (output in `desktop/release`).
 
-[Contributing to the project](https://github.com/WintrCat/wintrchess/blob/master/docs/contributing.md)
+## Changing the icon
 
-## ☕ Support
+Replace `desktop/build/icon.png` (1024x1024, transparent background) and `desktop/build/icon.ico` (multi-size, 256x256 down to 16x16), then rebuild.
 
-If you like this project or find it useful, consider buying me a little coffee! Everything is appreciated so much 💙
-[https://ko-fi.com/wintrcat](https://ko-fi.com/wintrcat)
+## Licence
+
+GPL-3.0, same as WintrChess. Stockfish is GPL-3.0 as well.

@@ -1,0 +1,299 @@
+const { app, BrowserWindow, Menu, session, shell } = require("electron");
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+
+const PREFERRED_PORT = 38417;
+const HOST = "127.0.0.1";
+
+if (process.env.PORTABLE_EXECUTABLE_DIR) {
+    try {
+        const dataDir = path.join(
+            process.env.PORTABLE_EXECUTABLE_DIR, "OfflineChess-data"
+        );
+
+        fs.mkdirSync(dataDir, { recursive: true });
+        app.setPath("userData", dataDir);
+    } catch {
+    }
+}
+
+const appRoot = path.join(__dirname, "app");
+const searchRoots = [
+    path.join(appRoot, "dist"),
+    path.join(appRoot, "public")
+];
+
+const mimeTypes = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".wasm": "application/wasm",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon",
+    ".mp3": "audio/mpeg",
+    ".ttf": "font/ttf",
+    ".txt": "text/plain; charset=utf-8"
+};
+
+const pages = {
+    analysis: path.join(appRoot, "public", "apps", "features", "analysis.html"),
+    settings: path.join(appRoot, "public", "apps", "settings.html")
+};
+
+const contentSecurityPolicy = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' blob:",
+    "worker-src 'self' blob:",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.chesscomfiles.com https://*.chess.com",
+    "font-src 'self' data:",
+    "media-src 'self' blob: data:",
+    "connect-src 'self' https://api.chess.com https://lichess.org"
+].join("; ");
+
+const allowedRemoteHosts = [
+    /^api\.chess\.com$/,
+    /(^|\.)chesscomfiles\.com$/,
+    /^images\.chesscomfiles\.com$/,
+    /^lichess\.org$/
+];
+
+let origin = "";
+let mainWindow = null;
+
+function safeResolve(root, urlPath) {
+    const resolved = path.normalize(path.join(root, urlPath));
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) return null;
+
+    try {
+        return fs.statSync(resolved).isFile() ? resolved : null;
+    } catch {
+        return null;
+    }
+}
+
+function findFile(urlPath) {
+    for (const root of searchRoots) {
+        const found = safeResolve(root, urlPath);
+        if (found) return found;
+    }
+
+    return null;
+}
+
+function sendFile(res, filePath, isPage) {
+    const headers = {
+        "Content-Type": mimeTypes[path.extname(filePath).toLowerCase()]
+            || "application/octet-stream",
+        "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff"
+    };
+
+    if (isPage) headers["Content-Security-Policy"] = contentSecurityPolicy;
+
+    fs.readFile(filePath, (error, data) => {
+        if (error) {
+            res.writeHead(500);
+            return res.end();
+        }
+
+        headers["Content-Length"] = data.length;
+        res.writeHead(200, headers);
+        res.end(data);
+    });
+}
+
+function handleRequest(req, res) {
+    if (req.method !== "GET" && req.method !== "HEAD") {
+        res.writeHead(405);
+        return res.end();
+    }
+
+    let urlPath;
+
+    try {
+        urlPath = decodeURIComponent(new URL(req.url, origin || "http://localhost").pathname);
+    } catch {
+        res.writeHead(400);
+        return res.end();
+    }
+
+    if (urlPath === "/" || urlPath === "") {
+        res.writeHead(302, { Location: "/analysis" });
+        return res.end();
+    }
+
+    if (urlPath === "/analysis" || urlPath === "/analysis/") {
+        return sendFile(res, pages.analysis, true);
+    }
+
+    if (urlPath === "/settings" || urlPath.startsWith("/settings/")) {
+        return sendFile(res, pages.settings, true);
+    }
+
+    const file = findFile(urlPath);
+
+    if (file) return sendFile(res, file, false);
+
+    if (!path.extname(urlPath)) return sendFile(res, pages.analysis, true);
+
+    res.writeHead(404);
+    res.end();
+}
+
+function listen(port) {
+    return new Promise((resolve, reject) => {
+        const server = http.createServer(handleRequest);
+
+        server.once("error", reject);
+        server.listen(port, HOST, () => {
+            server.removeListener("error", reject);
+            resolve(server);
+        });
+    });
+}
+
+async function startServer() {
+    let server;
+
+    try {
+        server = await listen(PREFERRED_PORT);
+    } catch {
+        server = await listen(0);
+    }
+
+    origin = "http://" + HOST + ":" + server.address().port;
+
+    return server;
+}
+
+function installNetworkGuard() {
+    session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+        let url;
+
+        try {
+            url = new URL(details.url);
+        } catch {
+            return callback({ cancel: true });
+        }
+
+        if (["data:", "blob:", "devtools:", "chrome-extension:"].includes(url.protocol)) {
+            return callback({ cancel: false });
+        }
+
+        if (url.origin === origin) return callback({ cancel: false });
+
+        if (url.protocol === "https:") {
+            if (url.hostname === "lichess.org") {
+                return callback({ cancel: !url.pathname.startsWith("/api/games/user/") });
+            }
+
+            if (allowedRemoteHosts.some(pattern => pattern.test(url.hostname))) {
+                return callback({ cancel: false });
+            }
+        }
+
+        callback({ cancel: true });
+    });
+
+    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => {
+        callback(false);
+    });
+}
+
+function createWindow() {
+    mainWindow = new BrowserWindow({
+        width: 1400,
+        height: 900,
+        minWidth: 900,
+        minHeight: 600,
+        show: false,
+        title: "OfflineChess",
+        backgroundColor: "#1e1e1e",
+        icon: path.join(__dirname, "build", "icon.png"),
+        autoHideMenuBar: true,
+        webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false,
+            sandbox: true,
+            spellcheck: false
+        }
+    });
+
+    mainWindow.once("ready-to-show", () => mainWindow.show());
+
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        if (url.startsWith("https://")) shell.openExternal(url);
+
+        return { action: "deny" };
+    });
+
+    mainWindow.webContents.on("will-navigate", (event, url) => {
+        if (new URL(url).origin === origin) return;
+
+        event.preventDefault();
+
+        if (url.startsWith("https://")) shell.openExternal(url);
+    });
+
+    mainWindow.webContents.on("before-input-event", (event, input) => {
+        if (input.type !== "keyDown") return;
+
+        const contents = mainWindow.webContents;
+
+        if (input.key === "F11") {
+            mainWindow.setFullScreen(!mainWindow.isFullScreen());
+            event.preventDefault();
+        } else if (input.control && (input.key === "=" || input.key === "+")) {
+            contents.setZoomLevel(contents.getZoomLevel() + 0.5);
+            event.preventDefault();
+        } else if (input.control && input.key === "-") {
+            contents.setZoomLevel(contents.getZoomLevel() - 0.5);
+            event.preventDefault();
+        } else if (input.control && input.key === "0") {
+            contents.setZoomLevel(0);
+            event.preventDefault();
+        } else if (
+            process.env.OFFLINECHESS_DEBUG
+            && (input.key === "F12" || (input.control && input.shift && input.key.toLowerCase() === "i"))
+        ) {
+            contents.toggleDevTools();
+            event.preventDefault();
+        }
+    });
+
+    mainWindow.on("closed", () => {
+        mainWindow = null;
+    });
+
+    mainWindow.loadURL(origin + "/analysis");
+}
+
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+} else {
+    app.on("second-instance", () => {
+        if (!mainWindow) return;
+
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+    });
+
+    app.whenReady().then(async () => {
+        Menu.setApplicationMenu(null);
+
+        await startServer();
+        installNetworkGuard();
+        createWindow();
+
+        app.on("activate", () => {
+            if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        });
+    });
+
+    app.on("window-all-closed", () => app.quit());
+}
