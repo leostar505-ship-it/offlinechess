@@ -39,12 +39,14 @@ jobs:
       - name: Package Windows installer and portable exe
         run: npm run dist -w desktop
 
-      - name: Zip Setup and Portable
+      - name: Zip the four packages
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist-out | Out-Null
-          Compress-Archive -Path desktop/release/full/OfflineChess-Setup-Full-*.exe, desktop/release/lite/OfflineChess-Setup-Lite-*.exe -DestinationPath dist-out/OfflineChess-Setup-1.0.0.zip
-          Compress-Archive -Path desktop/release/full/OfflineChess-Portable-Full-*.exe, desktop/release/lite/OfflineChess-Portable-Lite-*.exe -DestinationPath dist-out/OfflineChess-Portable-1.0.0.zip
+          Compress-Archive -Path desktop/release/full/OfflineChess-Setup-Full-*.exe -DestinationPath dist-out/Full_suite.zip
+          Compress-Archive -Path desktop/release/full/OfflineChess-Portable-Full-*.exe -DestinationPath dist-out/Full_portable.zip
+          Compress-Archive -Path desktop/release/lite/OfflineChess-Setup-Lite-*.exe -DestinationPath dist-out/Lite_suite.zip
+          Compress-Archive -Path desktop/release/lite/OfflineChess-Portable-Lite-*.exe -DestinationPath dist-out/Lite_portable.zip
           Copy-Item node_modules/stockfish/bin/stockfish-19-single.js dist-out/
           Copy-Item node_modules/stockfish/bin/stockfish-19-single.wasm dist-out/
           Get-ChildItem dist-out | Select-Object Name, Length
@@ -52,8 +54,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-1
-          name: OfflineChess build 1
+          tag_name: build-2
+          name: OfflineChess build 2
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -61,8 +63,18 @@ jobs:
             - Upgraded to Stockfish 19
             - Made everything local
             - Uh fuck them ads
+
+            Full_suite.zip - installer with everything included
+            Full_portable.zip - single exe, no install, everything included
+            Lite_suite.zip - smaller installer
+            Lite_portable.zip - smaller single exe, no install
+
+            Lite downloads the full Stockfish 19 only if you pick it in settings.
+            The two stockfish-19-single files below are what Lite downloads, ignore them.
           files: |
-            dist-out/OfflineChess-Setup-1.0.0.zip
-            dist-out/OfflineChess-Portable-1.0.0.zip
+            dist-out/Full_suite.zip
+            dist-out/Full_portable.zip
+            dist-out/Lite_suite.zip
+            dist-out/Lite_portable.zip
             dist-out/stockfish-19-single.js
             dist-out/stockfish-19-single.wasm

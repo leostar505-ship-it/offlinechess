@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const BASE_URL = "https://github.com/leostar505-ship-it/offlinechess/releases/download/build-1/";
+const BASE_URL = "https://github.com/leostar505-ship-it/offlinechess/releases/download/build-2/";
 
 const FILES = [
     {
