@@ -1,0 +1,61 @@
+name: Build Linux app
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - Release
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Package Linux installer and portable
+        run: npm run dist:linux -w desktop
+
+      - name: Zip
+        run: |
+          mkdir -p dist-out
+          ls -l desktop/release/skeleton-linux
+          zip -j dist-out/OfflineChess.zip desktop/release/skeleton-linux/OfflineChess-*.deb
+          zip -j dist-out/OfflineChess_Portable.zip desktop/release/skeleton-linux/OfflineChess-*.AppImage
+          ls -l dist-out
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: penguin-v1.0.0
+          name: Penguin v1.0.0
+          prerelease: false
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            Linux build of OfflineChess.
+
+            OfflineChess.zip - .deb installer (Debian, Ubuntu, Mint and similar), adds an app menu entry
+            OfflineChess_Portable.zip - AppImage, no install: unzip, then run `chmod +x OfflineChess-1.0.0.AppImage` and double-click it or run `./OfflineChess-1.0.0.AppImage`
+
+            On first launch the app asks which Stockfish 19 engine to download (Lite or Full), so you need internet once.
+          files: |
+            dist-out/OfflineChess.zip
+            dist-out/OfflineChess_Portable.zip

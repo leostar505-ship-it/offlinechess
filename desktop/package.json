@@ -3,7 +3,7 @@
     "productName": "OfflineChess",
     "version": "1.0.0",
     "description": "OfflineChess - WintrChess analysis as a local desktop app, no ads",
-    "author": "leostar505",
+    "author": "leostar505 <leostar505-ship-it@users.noreply.github.com>",
     "license": "GPL-3.0-only",
     "private": true,
     "main": "main.js",
@@ -11,7 +11,8 @@
         "prepare-app": "node scripts/prepare.js",
         "start": "node scripts/prepare.js && electron .",
         "dist": "node scripts/dist.js",
-        "dist:release": "node scripts/dist.js skeleton --plain"
+        "dist:release": "node scripts/dist.js skeleton --plain",
+        "dist:linux": "node scripts/dist.js skeleton --plain --linux"
     },
     "devDependencies": {
         "electron": "45.0.0",
@@ -69,6 +70,17 @@
         },
         "portable": {
             "artifactName": "OfflineChess-Portable-${version}.exe"
+        },
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "icon": "build/icon.png",
+            "category": "Game",
+            "synopsis": "Ad-free local chess game analysis",
+            "maintainer": "leostar505 <leostar505-ship-it@users.noreply.github.com>",
+            "artifactName": "OfflineChess-${version}.${ext}"
         }
     },
     "repository": {

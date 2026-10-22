@@ -7,11 +7,16 @@ const engineDownload = require("./engine-download");
 const PREFERRED_PORT = 38417;
 const HOST = "127.0.0.1";
 
-if (process.env.PORTABLE_EXECUTABLE_DIR) {
+if (process.platform === "linux") {
+    app.commandLine.appendSwitch("no-sandbox");
+}
+
+const portableDir = process.env.PORTABLE_EXECUTABLE_DIR
+    || (process.env.APPIMAGE && path.dirname(process.env.APPIMAGE));
+
+if (portableDir) {
     try {
-        const dataDir = path.join(
-            process.env.PORTABLE_EXECUTABLE_DIR, "OfflineChess-data"
-        );
+        const dataDir = path.join(portableDir, "OfflineChess-data");
 
         fs.mkdirSync(dataDir, { recursive: true });
         app.setPath("userData", dataDir);
