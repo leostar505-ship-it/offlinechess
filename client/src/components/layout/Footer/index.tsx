@@ -39,7 +39,7 @@ function Footer({ className, style }: FooterProps) {
             />
 
             <span className={styles.copyrightNotice}>
-                OfflineChess {copyrightYear}
+                © {copyrightYear}
             </span>
 
             <span className={styles.copyrightNotice}>

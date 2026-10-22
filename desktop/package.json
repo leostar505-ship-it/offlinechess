@@ -10,7 +10,8 @@
     "scripts": {
         "prepare-app": "node scripts/prepare.js",
         "start": "node scripts/prepare.js && electron .",
-        "dist": "node scripts/dist.js"
+        "dist": "node scripts/dist.js",
+        "dist:release": "node scripts/dist.js skeleton --plain"
     },
     "devDependencies": {
         "electron": "45.0.0",

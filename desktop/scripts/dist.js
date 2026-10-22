@@ -7,8 +7,11 @@ const packageJson = require(path.join(desktopRoot, "package.json"));
 const version = packageJson.version;
 
 async function main() {
-    for (const edition of ["full", "lite", "skeleton"]) {
-        const label = edition.charAt(0).toUpperCase() + edition.slice(1);
+    const editions = process.argv.slice(2).filter(arg => !arg.startsWith("--"));
+    const plainNames = process.argv.includes("--plain");
+
+    for (const edition of editions.length ? editions : ["full", "lite", "skeleton"]) {
+        const label = plainNames ? "" : "-" + edition.charAt(0).toUpperCase() + edition.slice(1);
 
         const prepared = spawnSync(
             process.execPath,
@@ -21,8 +24,8 @@ async function main() {
         const config = JSON.parse(JSON.stringify(packageJson.build));
 
         config.directories.output = "release/" + edition;
-        config.nsis.artifactName = "OfflineChess-Setup-" + label + "-" + version + ".exe";
-        config.portable.artifactName = "OfflineChess-Portable-" + label + "-" + version + ".exe";
+        config.nsis.artifactName = "OfflineChess-Setup" + label + "-" + version + ".exe";
+        config.portable.artifactName = "OfflineChess-Portable" + label + "-" + version + ".exe";
 
         await build({
             projectDir: desktopRoot,

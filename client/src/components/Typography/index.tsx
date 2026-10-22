@@ -3,7 +3,7 @@ import React from "react";
 import TypographyProps from "./TypographyProps";
 import * as styles from "./Typography.module.css";
 
-import iconLogo from "@assets/img/logo.svg";
+import iconLogo from "@assets/img/logo.png";
 
 function Typography({
     includeIcon,
@@ -25,7 +25,7 @@ function Typography({
                 className={iconClassName}
                 style={{ height: 40, ...iconStyle }}
                 src={iconLogo}
-                title="WINTR"
+                title="OfflineChess"
                 draggable={false}
             />
         }
@@ -34,7 +34,7 @@ function Typography({
             className={`${styles.title} ${textClassName}`}
             style={textStyle}
         >
-            Wintr
+            Offline
 
             <b style={{ letterSpacing: 0 }}>
                 Chess
