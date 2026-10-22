@@ -4,6 +4,7 @@ import { cloneDeep, merge } from "lodash-es";
 import z from "zod";
 
 import EngineVersion from "shared/constants/EngineVersion";
+import { getFullEngineStatus } from "@/lib/fullEngine";
 import EngineArrowType from "@analysis/constants/EngineArrowType";
 import LocalStorageKey from "@/constants/LocalStorageKey";
 
@@ -111,5 +112,18 @@ const useSettingsStore = create<SettingsStore>((set, get) => ({
         );
     }
 }));
+
+getFullEngineStatus().then(status => {
+    if (status.installed) return;
+
+    const store = useSettingsStore.getState();
+
+    if (store.settings.analysis.engine.version != EngineVersion.STOCKFISH_19) return;
+
+    store.setSettings(draft => {
+        draft.analysis.engine.version = EngineVersion.STOCKFISH_19_LITE;
+        return draft;
+    });
+});
 
 export default useSettingsStore;

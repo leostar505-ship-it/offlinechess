@@ -39,43 +39,30 @@ jobs:
       - name: Package Windows installer and portable exe
         run: npm run dist -w desktop
 
-      - name: List output
-        run: Get-ChildItem desktop/release -Filter *.exe | Select-Object Name, Length
-        shell: pwsh
-
-      - name: Upload installer
-        uses: actions/upload-artifact@v4
-        with:
-          name: OfflineChess-Setup
-          path: desktop/release/OfflineChess-Setup-*.exe
-          if-no-files-found: error
-
-      - name: Upload portable
-        uses: actions/upload-artifact@v4
-        with:
-          name: OfflineChess-Portable
-          path: desktop/release/OfflineChess-Portable-*.exe
-          if-no-files-found: error
-
-      - name: Zip installer and portable separately
+      - name: Zip Setup and Portable
         shell: pwsh
         run: |
-          Get-ChildItem desktop/release -Filter OfflineChess-Setup-*.exe | ForEach-Object { Compress-Archive -Path $_.FullName -DestinationPath ($_.FullName -replace '\.exe$', '.zip') }
-          Get-ChildItem desktop/release -Filter OfflineChess-Portable-*.exe | ForEach-Object { Compress-Archive -Path $_.FullName -DestinationPath ($_.FullName -replace '\.exe$', '.zip') }
-          Get-ChildItem desktop/release -Filter *.zip | Select-Object Name, Length
+          New-Item -ItemType Directory -Force -Path dist-out | Out-Null
+          Compress-Archive -Path desktop/release/full/OfflineChess-Setup-Full-*.exe, desktop/release/lite/OfflineChess-Setup-Lite-*.exe -DestinationPath dist-out/OfflineChess-Setup-1.0.0.zip
+          Compress-Archive -Path desktop/release/full/OfflineChess-Portable-Full-*.exe, desktop/release/lite/OfflineChess-Portable-Lite-*.exe -DestinationPath dist-out/OfflineChess-Portable-1.0.0.zip
+          Copy-Item node_modules/stockfish/bin/stockfish-19-single.js dist-out/
+          Copy-Item node_modules/stockfish/bin/stockfish-19-single.wasm dist-out/
+          Get-ChildItem dist-out | Select-Object Name, Length
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-1
           name: OfflineChess build 1
+          prerelease: false
+          make_latest: true
+          target_commitish: ${{ github.sha }}
           body: |
             - Upgraded to Stockfish 19
             - Made everything local
             - Uh fuck them ads
-          prerelease: false
-          make_latest: true
-          target_commitish: ${{ github.sha }}
           files: |
-            desktop/release/OfflineChess-Setup-*.zip
-            desktop/release/OfflineChess-Portable-*.zip
+            dist-out/OfflineChess-Setup-1.0.0.zip
+            dist-out/OfflineChess-Portable-1.0.0.zip
+            dist-out/stockfish-19-single.js
+            dist-out/stockfish-19-single.wasm

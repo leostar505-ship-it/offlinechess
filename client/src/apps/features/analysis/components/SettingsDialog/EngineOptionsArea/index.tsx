@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tooltip } from "react-tooltip";
 import { floor, clamp } from "lodash-es";
@@ -6,6 +6,7 @@ import { floor, clamp } from "lodash-es";
 import EngineVersion from "shared/constants/EngineVersion";
 import EngineArrowType from "@analysis/constants/EngineArrowType";
 import useSettingsStore from "@/stores/SettingsStore";
+import { downloadFullEngine, getFullEngineStatus, FullEngineStatus } from "@/lib/fullEngine";
 import LogMessage from "@/components/common/LogMessage";
 import DropdownSetting from "@/components/settings/DropdownSetting";
 import NumberSetting from "@/components/settings/NumberSetting";
@@ -13,25 +14,60 @@ import SwitchSetting from "@/components/settings/SwitchSetting";
 
 import * as styles from "../SettingsDialog.module.css";
 
-const engineVersionOptions = [
-    {
-        label: "Stockfish 19 (94 MB)",
-        value: EngineVersion.STOCKFISH_19
-    },
-    {
-        label: "Stockfish 19 Lite (Recommended)",
-        value: EngineVersion.STOCKFISH_19_LITE
-    },
-    {
-        label: "Stockfish 19 (Compatibility)",
-        value: EngineVersion.STOCKFISH_19_ASM
-    }
-];
-
 function EngineOptionsArea() {
     const { t, i18n } = useTranslation(["analysis", "common"]);
 
     const { settings, setSettings } = useSettingsStore();
+
+    const [fullStatus, setFullStatus] = useState<FullEngineStatus | null>(null);
+    const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
+    const [downloadFailed, setDownloadFailed] = useState(false);
+    const [dropdownKey, setDropdownKey] = useState(0);
+
+    useEffect(() => {
+        getFullEngineStatus().then(setFullStatus);
+    }, []);
+
+    const engineVersionOptions = useMemo(() => [
+        {
+            label: fullStatus && !fullStatus.installed
+                ? "Stockfish 19 (94 MB download)"
+                : "Stockfish 19 (94 MB)",
+            value: EngineVersion.STOCKFISH_19
+        },
+        {
+            label: "Stockfish 19 Lite (Recommended)",
+            value: EngineVersion.STOCKFISH_19_LITE
+        },
+        {
+            label: "Stockfish 19 (Compatibility)",
+            value: EngineVersion.STOCKFISH_19_ASM
+        }
+    ], [fullStatus]);
+
+    async function selectEngineVersion(version: EngineVersion) {
+        if (version == EngineVersion.STOCKFISH_19 && fullStatus && !fullStatus.installed) {
+            setDownloadFailed(false);
+            setDownloadProgress(0);
+
+            const succeeded = await downloadFullEngine(setDownloadProgress);
+
+            setDownloadProgress(null);
+
+            if (!succeeded) {
+                setDownloadFailed(true);
+                setDropdownKey(key => key + 1);
+                return;
+            }
+
+            setFullStatus({ ...fullStatus, installed: true });
+        }
+
+        setSettings(draft => {
+            draft.analysis.engine.version = version;
+            return draft;
+        });
+    }
 
     const engineArrowsOptions = useMemo(() => [
         {
@@ -80,6 +116,7 @@ function EngineOptionsArea() {
             />
 
             <DropdownSetting
+                key={dropdownKey}
                 options={engineVersionOptions}
                 defaultValue={engineVersionOptions.find(
                     option => option.value == settings.analysis.engine.version
@@ -87,14 +124,23 @@ function EngineOptionsArea() {
                 onSelect={option => {
                     if (!option) return;
 
-                    setSettings(draft => {
-                        draft.analysis.engine.version = option.value;
-                        return draft;
-                    });
+                    selectEngineVersion(option.value);
                 }}
                 dropdownStyle={{ width: "180px" }}
             />
         </div>
+
+        {downloadProgress != null
+            && <LogMessage theme="info">
+                Downloading Stockfish 19... {Math.round(downloadProgress * 100)}%
+            </LogMessage>
+        }
+
+        {downloadFailed
+            && <LogMessage theme="error">
+                Could not download Stockfish 19. Check your internet connection and try again.
+            </LogMessage>
+        }
 
         <div className={styles.setting}>
             <span data-tooltip-id="settings-engine-depth">

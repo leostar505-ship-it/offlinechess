@@ -40,16 +40,30 @@ if (!stockfishBin) {
     process.exit(1);
 }
 
+const edition = process.argv[2] || process.env.OFFLINECHESS_EDITION || "full";
+
+if (edition !== "full" && edition !== "lite") {
+    console.error("edition must be full or lite");
+    process.exit(1);
+}
+
 const engineFiles = [
     "stockfish-19-lite-single.js",
     "stockfish-19-lite-single.wasm",
-    "stockfish-19-single.js",
-    "stockfish-19-single.wasm",
     "stockfish-19-asm.js"
 ];
+
+if (edition === "full") {
+    engineFiles.push("stockfish-19-single.js", "stockfish-19-single.wasm");
+}
 
 for (const file of engineFiles) {
     fs.copyFileSync(path.join(stockfishBin, file), path.join(engineTarget, file));
 }
 
-console.log("app files staged in " + target);
+fs.writeFileSync(
+    path.join(target, "public", "edition.json"),
+    JSON.stringify({ edition, fullEngine: edition === "full" })
+);
+
+console.log("app files staged in " + target + " (" + edition + ")");

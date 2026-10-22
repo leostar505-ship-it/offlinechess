@@ -8,8 +8,13 @@ The only network use is looking up games by username on Chess.com (and Lichess).
 
 Go to the **Releases** page on the right of this repository and download the newest build:
 
-- `OfflineChess-Setup-1.0.0.zip` - unzip it, then run the installer inside. It installs everything, adds a desktop shortcut and a Start menu entry. Nothing else needs to be installed first.
-- `OfflineChess-Portable-1.0.0.zip` - unzip it and run the exe inside from anywhere, nothing to install.
+- `OfflineChess-Setup-1.0.0.zip` - unzip it and pick an installer inside. It installs everything, adds a desktop shortcut and a Start menu entry. Nothing else needs to be installed first.
+- `OfflineChess-Portable-1.0.0.zip` - unzip it and pick an exe inside. Runs from anywhere, nothing to install.
+
+Each zip has two editions:
+
+- **Full** includes both Stockfish 19 engines (the 94 MB full one and Lite).
+- **Lite** is about half the size and ships Stockfish 19 Lite. If you pick the full Stockfish 19 in the engine settings, the app downloads it once (with a progress bar) and keeps it.
 
 Windows SmartScreen will warn about an unknown publisher because the app is not code signed. Click "More info", then "Run anyway".
 

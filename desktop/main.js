@@ -2,6 +2,7 @@ const { app, BrowserWindow, Menu, session, shell } = require("electron");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const engineDownload = require("./engine-download");
 
 const PREFERRED_PORT = 38417;
 const HOST = "127.0.0.1";
@@ -62,6 +63,45 @@ const allowedRemoteHosts = [
     /^lichess\.org$/
 ];
 
+function readBundledFullEngine() {
+    try {
+        const info = JSON.parse(
+            fs.readFileSync(path.join(appRoot, "public", "edition.json"), "utf8")
+        );
+
+        return info.fullEngine !== false;
+    } catch {
+        return true;
+    }
+}
+
+const bundledFullEngine = readBundledFullEngine();
+
+function userEngineDir() {
+    return path.join(app.getPath("userData"), "engines");
+}
+
+function sendJson(res, status, body) {
+    const data = Buffer.from(JSON.stringify(body));
+
+    res.writeHead(status, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": data.length,
+        "Cache-Control": "no-store"
+    });
+
+    res.end(data);
+}
+
+function isSameOriginRequest(req) {
+    const host = req.headers.host;
+    const requestOrigin = req.headers.origin;
+
+    if (host !== new URL(origin).host) return false;
+
+    return !requestOrigin || requestOrigin === origin;
+}
+
 let origin = "";
 let mainWindow = null;
 
@@ -108,6 +148,22 @@ function sendFile(res, filePath, isPage) {
 }
 
 function handleRequest(req, res) {
+    if (req.url === "/api/engine/full") {
+        if (!isSameOriginRequest(req)) {
+            res.writeHead(403);
+            return res.end();
+        }
+
+        if (req.method === "POST") {
+            engineDownload.start(userEngineDir());
+        } else if (req.method !== "GET") {
+            res.writeHead(405);
+            return res.end();
+        }
+
+        return sendJson(res, 200, engineDownload.getStatus(userEngineDir(), bundledFullEngine));
+    }
+
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405);
         return res.end();
@@ -138,6 +194,12 @@ function handleRequest(req, res) {
     const file = findFile(urlPath);
 
     if (file) return sendFile(res, file, false);
+
+    if (urlPath.startsWith("/engines/") && engineDownload.isEngineFile(path.basename(urlPath))) {
+        const downloaded = safeResolve(userEngineDir(), path.basename(urlPath));
+
+        if (downloaded) return sendFile(res, downloaded, false);
+    }
 
     if (!path.extname(urlPath)) return sendFile(res, pages.analysis, true);
 
