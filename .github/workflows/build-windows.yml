@@ -51,6 +51,19 @@ jobs:
           Copy-Item node_modules/stockfish/bin/stockfish-19-single.wasm dist-out/
           Get-ChildItem dist-out | Select-Object Name, Length
 
+      - name: Publish engine files for Lite
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: engine-data
+          name: engine-data
+          prerelease: false
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: Stockfish 19 engine files that the Lite editions download when you pick the full engine. You do not need these.
+          files: |
+            dist-out/stockfish-19-single.js
+            dist-out/stockfish-19-single.wasm
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
@@ -70,11 +83,17 @@ jobs:
             Lite_portable.zip - smaller single exe, no install
 
             Lite downloads the full Stockfish 19 only if you pick it in settings.
-            The two stockfish-19-single files below are what Lite downloads, ignore them.
           files: |
             dist-out/Full_suite.zip
             dist-out/Full_portable.zip
             dist-out/Lite_suite.zip
             dist-out/Lite_portable.zip
-            dist-out/stockfish-19-single.js
-            dist-out/stockfish-19-single.wasm
+
+      - name: Remove old engine files from the build release
+        shell: pwsh
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete-asset build-2 stockfish-19-single.js --yes
+          gh release delete-asset build-2 stockfish-19-single.wasm --yes
