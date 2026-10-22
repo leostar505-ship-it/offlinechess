@@ -69,6 +69,10 @@ jobs:
         with:
           tag_name: build-1
           name: OfflineChess build 1
+          body: |
+            - Upgraded to Stockfish 19
+            - Made everything local
+            - Uh fuck them ads
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
