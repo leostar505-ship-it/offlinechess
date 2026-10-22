@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[linux only]')
+    if: github.event_name == 'workflow_dispatch' || (!contains(github.event.head_commit.message, '[linux only]') && !contains(github.event.head_commit.message, '[alt only]'))
     runs-on: windows-latest
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"

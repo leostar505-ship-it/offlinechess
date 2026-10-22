@@ -1,0 +1,72 @@
+name: Build Windows alt editions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - Release
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-alt-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[linux only]')
+    runs-on: windows-latest
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Package Full and Lite editions
+        run: npm run dist:alt -w desktop
+
+      - name: Zip the four packages
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-out | Out-Null
+          Compress-Archive -Path desktop/release/full/OfflineChess-Setup-Full-*.exe -DestinationPath dist-out/Full_suite.zip
+          Compress-Archive -Path desktop/release/full/OfflineChess-Portable-Full-*.exe -DestinationPath dist-out/Full_portable.zip
+          Compress-Archive -Path desktop/release/lite/OfflineChess-Setup-Lite-*.exe -DestinationPath dist-out/Lite_suite.zip
+          Compress-Archive -Path desktop/release/lite/OfflineChess-Portable-Lite-*.exe -DestinationPath dist-out/Lite_portable.zip
+          Get-ChildItem dist-out | Select-Object Name, Length
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: release-v1-alt
+          name: Release v1 alt
+          prerelease: false
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            - Upgraded to Stockfish 19
+            - Made everything local
+            - Uh fuck them ads
+
+            Full_suite.zip - installer with everything included
+            Full_portable.zip - single exe, no install, everything included
+            Lite_suite.zip - smaller installer
+            Lite_portable.zip - smaller single exe, no install
+
+            Lite downloads the full Stockfish 19 only if you pick it in settings.
+          files: |
+            dist-out/Full_suite.zip
+            dist-out/Full_portable.zip
+            dist-out/Lite_suite.zip
+            dist-out/Lite_portable.zip

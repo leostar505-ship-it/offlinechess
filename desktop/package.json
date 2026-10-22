@@ -12,7 +12,8 @@
         "start": "node scripts/prepare.js && electron .",
         "dist": "node scripts/dist.js",
         "dist:release": "node scripts/dist.js skeleton --plain",
-        "dist:linux": "node scripts/dist.js skeleton --plain --linux"
+        "dist:linux": "node scripts/dist.js skeleton --plain --linux",
+        "dist:alt": "node scripts/dist.js full lite"
     },
     "devDependencies": {
         "electron": "45.0.0",
