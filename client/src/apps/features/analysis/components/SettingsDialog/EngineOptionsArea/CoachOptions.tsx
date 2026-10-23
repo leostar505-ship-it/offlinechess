@@ -236,10 +236,24 @@ function CoachOptions() {
 
             {model && !model.custom && !model.installed && !model.downloading
                 && <div className={styles.setting}>
-                    <span>{model.label} is not downloaded</span>
+                    <span>
+                        {model.progress > 0
+                            ? "Paused at " + Math.round(model.progress * 100) + "%"
+                            : model.label + " is not downloaded"}
+                    </span>
 
                     <Button onClick={() => startCoachDownload(coach.model).then(next => next && setStatus(next))}>
-                        Download
+                        {model.progress > 0 ? "Resume" : "Download"}
+                    </Button>
+                </div>
+            }
+
+            {model && !model.custom && !model.installed && !model.downloading && model.progress > 0
+                && <div className={styles.setting}>
+                    <span>Throw away the part already downloaded</span>
+
+                    <Button onClick={() => removeCoachModel(coach.model).then(next => next && setStatus(next))}>
+                        Delete partial download
                     </Button>
                 </div>
             }
@@ -256,7 +270,7 @@ function CoachOptions() {
                     <span>Downloading... {Math.round(model.progress * 100)}%</span>
 
                     <Button onClick={() => cancelCoachDownload(coach.model).then(next => next && setStatus(next))}>
-                        Cancel
+                        Pause
                     </Button>
                 </div>
             }

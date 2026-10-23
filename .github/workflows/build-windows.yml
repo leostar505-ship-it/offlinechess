@@ -49,8 +49,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.5
-          name: Release v1.5
+          tag_name: v1.5.1
+          name: Release v1.5.1
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -68,6 +68,7 @@ jobs:
             - A notice appears under the analysis switch whenever an AI mode is selected, saying the model is an AI and might make mistakes
             - Model downloads now reconnect and resume by themselves if the connection drops or stalls
             - The AI coach model list is now online: opening the model dropdown checks the models-list release on GitHub for new models, with a RAM warning based on the size in each model's name. The privacy notice mentions this
+            - Model downloads can be paused and resumed, with a button to delete a partial download
             - Clearer wording when a move throws away your advantage
             - Removed the three smallest AI sizes, they could not analyse, and weaker models no longer replace the normal explanation
 
