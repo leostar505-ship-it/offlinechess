@@ -63,7 +63,6 @@ interface Context {
 }
 
 const tierNames = ["losing", "worse", "equal", "better", "winning"];
-const droppedTierPhrases = ["a losing one", "a worse one", "an equal one", "only a slightly better one"];
 
 function tierOf(evaluation: Evaluation) {
     if (evaluation.type == "mate") return evaluation.value > 0 ? 4 : 0;
@@ -344,14 +343,17 @@ function collectIssues(ctx: Context): Finding[] {
 }
 
 function swingSentence(ctx: Context) {
-    const before = tierOf(ctx.prevSubj);
-    const after = tierOf(ctx.currSubj);
+    const mover = colourWord(ctx.mover);
 
-    if (after < before) {
-        return `This takes you from ${withArticle(tierNames[before])} position to ${droppedTierPhrases[after]}`;
+    if (ctx.currSubj.type == "mate" && ctx.currSubj.value < 0) {
+        return `This leaves ${colourWord(ctx.opponent)} completely winning, with checkmate in ${mateLength(ctx.currSubj)}`;
     }
 
-    return `The evaluation for you drops from ${stringifyEvaluation(ctx.prevSubj, true)} to ${stringifyEvaluation(ctx.currSubj, true)}, handing ${colourWord(ctx.opponent)} more of the initiative`;
+    if (ctx.currSubj.type == "mate" && ctx.prevSubj.type == "mate") {
+        return `${mover} is still completely winning, but the checkmate takes longer`;
+    }
+
+    return `This makes the position worse for ${mover}, from ${stringifyEvaluation(ctx.prevSubj, true)} to ${stringifyEvaluation(ctx.currSubj, true)}`;
 }
 
 function explainBadMove(ctx: Context) {
