@@ -399,7 +399,7 @@ function startWorker(key, dir) {
 
         pending.delete(message.id);
 
-        if (message.type === "ready" && message.id === 0 && activeKey === key) {
+        if (message.type === "ready" && message.id === 0 && activeKey === key && key === "custom") {
             thinkingSupport[key] = !!message.thinking;
         }
 
