@@ -57,10 +57,10 @@ jobs:
             - Made everything local
             - Uh fuck them ads
             - Made closer to chess.com review
-            - Optional offline AI coach: explains your moves after you press Analyse. Pick a size in Settings (Pico 0.3 GB, Nano 0.4 GB, Tiny 0.6 GB, Compact 1.8 GB, Standard 2.5 GB, High quality 4 GB, Absurd 9 GB) or add your own .gguf model. Runs only on your computer.
+            - Optional offline AI coach: explains your moves after you press Analyse. Pick a size in Settings (Compact 1.8 GB, Standard 2.5 GB, High quality 4 GB, Absurd 9 GB) or add your own .gguf model. Runs only on your computer.
             - New suggestion arrows: Best Result (green, shows the key moves of a strong attack such as a sacrifice leading to mate) and Move Threats (orange, shows what the move you played now attacks)
             - Clearer wording when a move throws away your advantage
-            - Removed the three smallest AI sizes, they could not analyse. The AI coach is now Compact, Standard, High quality, Absurd or your own model, and weaker models no longer replace the normal explanation
+            - Removed the three smallest AI sizes, they could not analyse, and weaker models no longer replace the normal explanation
 
             OfflineChess.zip - installer, adds a desktop shortcut
             OfflineChess_Portable.zip - single exe, no install
