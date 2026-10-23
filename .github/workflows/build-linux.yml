@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || (!contains(github.event.head_commit.message, '[alt only]') && !contains(github.event.head_commit.message, '[penguin alt only]'))
+    if: github.event_name == 'workflow_dispatch' || (!contains(github.event.head_commit.message, '[windows only]') && !contains(github.event.head_commit.message, '[alt only]') && !contains(github.event.head_commit.message, '[penguin alt only]'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -9,6 +9,7 @@ import {
 import { getOpeningName } from "./utils/opening";
 import { getMoveAccuracy } from "./accuracy";
 import { classify } from "./classify";
+import { explainMove } from "./explain/explain";
 
 export function getGameAnalysis(
     rootNode: StateTreeNode,
@@ -31,6 +32,20 @@ export function getGameAnalysis(
         const current = extractCurrentStateTreeNode(node);
 
         if (!previous || !current) continue;
+
+        if (node.state.classification) {
+            try {
+                node.state.explanation = explainMove(
+                    node,
+                    previous,
+                    current,
+                    node.state.classification,
+                    options
+                );
+            } catch (err) {
+                node.state.explanation = undefined;
+            }
+        }
 
         node.state.accuracy = getMoveAccuracy(
             previous.evaluation,

@@ -47,8 +47,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: Release v1.0.0
+          tag_name: v1.1.0
+          name: Release v1.1.0
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -56,6 +56,7 @@ jobs:
             - Upgraded to Stockfish 19
             - Made everything local
             - Uh fuck them ads
+            - Made closer to chess.com review
 
             OfflineChess.zip - installer, adds a desktop shortcut
             OfflineChess_Portable.zip - single exe, no install

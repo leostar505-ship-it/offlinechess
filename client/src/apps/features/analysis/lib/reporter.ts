@@ -56,7 +56,10 @@ export async function analyseNode(
     const parentNode = clone(node.parent);
     parentNode.children = [childlessNode];
 
-    const reportResult = await analyseStateTree(parentNode, options);
+    const reportResult = await analyseStateTree(parentNode, {
+        ...options,
+        ownPreviousMoveUci: node.parent.parent?.state.move?.uci
+    });
     const analysedNode = reportResult.gameAnalysis?.stateTree.children.at(0);
 
     return {

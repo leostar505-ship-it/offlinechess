@@ -12,6 +12,7 @@ export const boardStateSchema = z.object({
     engineLines: z.array(engineLineSchema),
     classification: z.enum(Classification).optional(),
     accuracy: z.number().optional(),
+    explanation: z.string().optional(),
     opening: z.string().optional()
 });
 

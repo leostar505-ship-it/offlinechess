@@ -150,6 +150,13 @@ function ClassifiedMoveCard() {
                 </LogMessage>
             }
 
+            {node.state.classification
+                && node.state.explanation
+                && <span className={styles.explanation}>
+                    {node.state.explanation}
+                </span>
+            }
+
             {topAlternativeMove
                 && node.state.classification
                 && topAlternativeMove.san != node.state.move?.san

@@ -28,6 +28,14 @@
     font-size: 1.4rem;
 }
 
+.explanation {
+    white-space: pre-line;
+    font-size: 1rem;
+    line-height: 1.4;
+
+    color: rgba(255, 255, 255, 0.88);
+}
+
 .bestAlternativeComment {
     display: flex;
     align-items: center;

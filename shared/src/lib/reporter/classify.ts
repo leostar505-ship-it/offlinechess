@@ -26,7 +26,7 @@ export function classify(
         throw new Error("information missing from current or previous node.");
     }
 
-    const opts: Required<ReportOptions> = {
+    const opts: Required<Omit<ReportOptions, "ownPreviousMoveUci">> = {
         includeBrilliant: true,
         includeCritical: true,
         includeTheory: true,
