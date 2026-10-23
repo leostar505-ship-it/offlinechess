@@ -1,9 +1,11 @@
-export type CoachModelKey = "tiny" | "compact" | "small" | "large" | "huge";
+export type CoachModelKey = "pico" | "nano" | "tiny" | "compact" | "small" | "large" | "huge" | "custom";
 export type CoachCoverage = "key" | "all" | "current";
 
 export interface CoachModelStatus {
     label: string;
     warning: string | null;
+    custom: boolean;
+    loadError: string | null;
     sizeBytes: number;
     installed: boolean;
     downloading: boolean;
@@ -56,6 +58,34 @@ export function cancelCoachDownload(model: CoachModelKey) {
 
 export function removeCoachModel(model: CoachModelKey) {
     return post("/api/coach/" + model + "/remove");
+}
+
+export function uploadCustomCoachModel(
+    file: File,
+    onProgress: (progress: number) => void
+): Promise<string | null> {
+    return new Promise(resolve => {
+        const request = new XMLHttpRequest();
+
+        request.open("POST", "/api/coach/custom/upload?name=" + encodeURIComponent(file.name));
+
+        request.upload.onprogress = event => {
+            if (event.lengthComputable) onProgress(event.loaded / event.total);
+        };
+
+        request.onload = () => {
+            if (request.status == 200) return resolve(null);
+
+            try {
+                resolve(JSON.parse(request.responseText).error || "Upload failed");
+            } catch {
+                resolve("Upload failed");
+            }
+        };
+
+        request.onerror = () => resolve("Upload failed");
+        request.send(file);
+    });
 }
 
 export async function generateCoachText(

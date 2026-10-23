@@ -6,6 +6,7 @@ import {
     startCoachDownload,
     cancelCoachDownload,
     removeCoachModel,
+    uploadCustomCoachModel,
     formatGigabytes,
     CoachStatus,
     CoachModelKey,
@@ -19,11 +20,14 @@ import SwitchSetting from "@/components/settings/SwitchSetting";
 import * as styles from "../SettingsDialog.module.css";
 
 const modelOptions: { label: string; value: CoachModelKey }[] = [
+    { label: "Pico (0.3 GB)", value: "pico" },
+    { label: "Nano (0.4 GB)", value: "nano" },
     { label: "Tiny (0.6 GB)", value: "tiny" },
     { label: "Compact (1.8 GB)", value: "compact" },
     { label: "Standard (2.5 GB)", value: "small" },
     { label: "High quality (4 GB)", value: "large" },
-    { label: "Absurd (9 GB)", value: "huge" }
+    { label: "Absurd (9 GB)", value: "huge" },
+    { label: "Your own model (.gguf)", value: "custom" }
 ];
 
 const coverageOptions: { label: string; value: CoachCoverage }[] = [
@@ -38,6 +42,9 @@ function CoachOptions() {
 
     const [status, setStatus] = useState<CoachStatus | null>(null);
     const [unavailable, setUnavailable] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const fileInput = useRef<HTMLInputElement>(null);
     const timer = useRef<ReturnType<typeof setInterval>>();
 
     function refresh() {
@@ -61,6 +68,17 @@ function CoachOptions() {
 
         if (downloading) timer.current = setInterval(refresh, 700);
     }, [status]);
+
+    async function uploadFile(file: File) {
+        setUploadError(null);
+        setUploadProgress(0);
+
+        const error = await uploadCustomCoachModel(file, setUploadProgress);
+
+        setUploadProgress(null);
+        setUploadError(error);
+        refresh();
+    }
 
     if (unavailable) return null;
 
@@ -136,7 +154,45 @@ function CoachOptions() {
                 </LogMessage>
             }
 
-            {model && !model.installed && !model.downloading
+            {model?.custom && !model.installed && uploadProgress == null
+                && <div className={styles.setting}>
+                    <span>No model added yet</span>
+
+                    <Button onClick={() => fileInput.current?.click()}>
+                        Choose .gguf file
+                    </Button>
+
+                    <input
+                        ref={fileInput}
+                        type="file"
+                        accept=".gguf"
+                        style={{ display: "none" }}
+                        onChange={event => {
+                            const file = event.target.files?.[0];
+
+                            event.target.value = "";
+
+                            if (file) uploadFile(file);
+                        }}
+                    />
+                </div>
+            }
+
+            {uploadProgress != null
+                && <LogMessage theme="info">
+                    Adding your model... {Math.round(uploadProgress * 100)}%
+                </LogMessage>
+            }
+
+            {uploadError && <LogMessage theme="error">{uploadError}</LogMessage>}
+
+            {model?.loadError
+                && <LogMessage theme="error">
+                    This model could not be loaded: {model.loadError}
+                </LogMessage>
+            }
+
+            {model && !model.custom && !model.installed && !model.downloading
                 && <div className={styles.setting}>
                     <span>{model.label} is not downloaded</span>
 

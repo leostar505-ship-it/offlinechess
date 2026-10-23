@@ -1,7 +1,9 @@
 let model = null;
 let context = null;
 let LlamaChatSession = null;
+let QwenChatWrapper = null;
 let loading = null;
+let thinkingModel = false;
 
 const controllers = new Map();
 
@@ -14,10 +16,17 @@ async function load(message) {
         const llamaModule = await import("node-llama-cpp");
 
         LlamaChatSession = llamaModule.LlamaChatSession;
+        QwenChatWrapper = llamaModule.QwenChatWrapper;
 
         const llama = await llamaModule.getLlama({ gpu: false, build: "never" });
 
         model = await llama.loadModel({ modelPath: message.modelPath });
+        const template = model.fileInfo?.metadata?.tokenizer?.chat_template;
+
+        thinkingModel = typeof template === "string"
+            && template.includes("<think>")
+            && template.includes("<|im_start|>");
+
         context = await model.createContext({
             contextSize: 2048,
             threads: message.threads
@@ -40,7 +49,10 @@ async function generate(message) {
 
         const session = new LlamaChatSession({
             contextSequence: sequence,
-            systemPrompt: message.system
+            systemPrompt: message.system,
+            chatWrapper: thinkingModel
+                ? new QwenChatWrapper({ thoughts: "discourage" })
+                : undefined
         });
 
         let text = "";

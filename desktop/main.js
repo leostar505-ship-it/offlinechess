@@ -146,6 +146,23 @@ async function handleCoachRequest(req, res) {
         return sendJson(res, 200, coach.getStatus(userCoachDir()));
     }
 
+    if (url === "/api/coach/custom/upload") {
+        let fileName = "model.gguf";
+
+        try {
+            fileName = path.basename(decodeURIComponent(new URL(req.url, origin).searchParams.get("name") || fileName));
+        } catch {
+        }
+
+        try {
+            await coach.uploadCustom(req, userCoachDir(), fileName);
+
+            return sendJson(res, 200, coach.getStatus(userCoachDir()));
+        } catch (error) {
+            return sendJson(res, 400, { error: error.message || "Upload failed" });
+        }
+    }
+
     if (url === "/api/coach/generate") {
         let body;
 

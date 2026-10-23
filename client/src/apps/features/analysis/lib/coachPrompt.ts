@@ -237,3 +237,14 @@ export function coachTextIsGrounded(text: string, prompt: string) {
 
     return true;
 }
+
+export function coachTextIsSane(text: string) {
+    if (text.length < 20) return false;
+
+    const sentences = text
+        .split(/(?<=[.!?])\s+|\n+/)
+        .map(sentence => sentence.trim().toLowerCase())
+        .filter(sentence => sentence.length > 0);
+
+    return new Set(sentences).size == sentences.length;
+}

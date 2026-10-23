@@ -31,7 +31,7 @@ const settingsSchema = z.object({
         simpleNotation: z.boolean(),
         coach: z.object({
             enabled: z.boolean(),
-            model: z.enum(["tiny", "compact", "small", "large", "huge"]),
+            model: z.enum(["pico", "nano", "tiny", "compact", "small", "large", "huge", "custom"]),
             coverage: z.enum(["key", "all", "current"])
         })
     }),

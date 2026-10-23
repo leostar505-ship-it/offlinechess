@@ -7,6 +7,9 @@ const { fork } = require("child_process");
 
 const HF = "https://huggingface.co/";
 
+const TOO_SMALL_WARNING = "Yeah at this point twin you're cooked if you try to learn off of these \u{1F62D}\u{1F64F}";
+const CUSTOM_WARNING = "Your own model must be a GGUF file that works with the host this app uses (llama.cpp through node-llama-cpp). Newer or unusual model types may fail to load, bigger models need more RAM, and the comments are only as good as the model you pick.";
+
 const MODELS = {
     tiny: {
         label: "Tiny (about 0.6 GB)",
@@ -14,7 +17,6 @@ const MODELS = {
         name: "Qwen3-0.6B-Q8_0.gguf",
         size: 639447744,
         sha256: "e150ed544dfe6016930c026a93913a5e3184181ebfe6ab2223ae01dd0491784c",
-        noThink: true,
         warning: "Lower quality analysis. Use this only if you are data limited or do not have enough RAM for a bigger model."
     },
     compact: {
@@ -23,8 +25,23 @@ const MODELS = {
         name: "Qwen3-1.7B-Q8_0.gguf",
         size: 1834426944,
         sha256: "0becaa825564295d82e9af4d008bca5f8b7f5f73bf1c6a0b58f7c53ef26b47fd",
-        noThink: true,
         warning: "Lower quality analysis. Use this if you are data limited or do not have enough RAM for the Standard model."
+    },
+    nano: {
+        label: "Nano (about 0.4 GB)",
+        repo: "unsloth/Qwen3-0.6B-GGUF",
+        name: "Qwen3-0.6B-Q4_K_M.gguf",
+        size: 396705472,
+        sha256: "ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a",
+        warning: TOO_SMALL_WARNING
+    },
+    pico: {
+        label: "Pico (about 0.3 GB)",
+        repo: "unsloth/Qwen3-0.6B-GGUF",
+        name: "Qwen3-0.6B-Q2_K.gguf",
+        size: 296238784,
+        sha256: "26d035ea15c4a2853e8d20ffc56a76f6164e17dbb6c9e532c5766700c404519d",
+        warning: TOO_SMALL_WARNING
     },
     small: {
         label: "Standard (about 2.5 GB)",
@@ -32,7 +49,6 @@ const MODELS = {
         name: "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
         size: 2497281120,
         sha256: "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
-        noThink: false,
         warning: null
     },
     large: {
@@ -41,8 +57,15 @@ const MODELS = {
         name: "Qwen3-4B-Instruct-2507-Q8_0.gguf",
         size: 4280405600,
         sha256: "391c1e410fd9f4cf2de2b510273b56a84c19ce18f4fa3bfb3774031dac4ef068",
-        noThink: false,
         warning: null
+    },
+    custom: {
+        label: "Your own model",
+        repo: null,
+        name: "custom.gguf",
+        size: 0,
+        sha256: null,
+        warning: CUSTOM_WARNING
     },
     huge: {
         label: "Absurd (about 9 GB)",
@@ -50,7 +73,6 @@ const MODELS = {
         name: "Qwen3-14B-Q4_K_M.gguf",
         size: 9001753984,
         sha256: "5eaa0870bd81ed3b58a630a271234cfa604e43ffb3a19cd68e54a80dd9d52a66",
-        noThink: true,
         warning: "Extremely slow. Even on a fast computer each comment can take several minutes, so use it with Only the move I'm viewing. It needs about 16 GB of RAM."
     }
 };
@@ -64,6 +86,7 @@ const allowedHosts = [
 ];
 
 const states = {};
+const loadErrors = {};
 
 for (const key of Object.keys(MODELS)) {
     states[key] = { downloading: false, received: 0, error: null, abort: null };
@@ -77,18 +100,46 @@ function modelPath(key, dir) {
     return path.join(dir, MODELS[key].name);
 }
 
+function customInfoPath(dir) {
+    return path.join(dir, "custom.json");
+}
+
+function sizeOf(key, dir) {
+    if (key !== "custom") return MODELS[key].size;
+
+    try {
+        return fs.statSync(modelPath(key, dir)).size;
+    } catch {
+        return 0;
+    }
+}
+
 function isInstalled(key, dir) {
     try {
-        return fs.statSync(modelPath(key, dir)).size === MODELS[key].size;
+        const size = fs.statSync(modelPath(key, dir)).size;
+
+        return key === "custom" ? size > 0 : size === MODELS[key].size;
     } catch {
         return false;
     }
 }
 
-function memoryInfo(key) {
+function labelOf(key, dir) {
+    if (key !== "custom") return MODELS[key].label;
+
+    try {
+        const info = JSON.parse(fs.readFileSync(customInfoPath(dir), "utf8"));
+
+        return "Your own model: " + String(info.name).slice(0, 80);
+    } catch {
+        return MODELS[key].label;
+    }
+}
+
+function memoryInfo(key, dir) {
     const total = os.totalmem();
     const usable = Math.max(0, total - BACKGROUND_RESERVE);
-    const needed = MODELS[key].size + RUNTIME_OVERHEAD;
+    const needed = sizeOf(key, dir) + RUNTIME_OVERHEAD;
 
     return {
         totalBytes: total,
@@ -229,7 +280,7 @@ async function runDownload(key, dir, signal) {
 function start(key, dir) {
     const state = states[key];
 
-    if (state.downloading || isInstalled(key, dir)) return;
+    if (key === "custom" || state.downloading || isInstalled(key, dir)) return;
 
     const controller = new AbortController();
 
@@ -261,6 +312,9 @@ function remove(key, dir) {
     fs.rmSync(modelPath(key, dir), { force: true });
     fs.rmSync(modelPath(key, dir) + ".part", { force: true });
 
+    if (key === "custom") fs.rmSync(customInfoPath(dir), { force: true });
+
+    loadErrors[key] = null;
     states[key].received = 0;
     states[key].error = null;
 }
@@ -283,15 +337,17 @@ function getStatus(dir) {
         const received = state.downloading ? state.received : partial;
 
         status.models[key] = {
-            label: MODELS[key].label,
+            label: labelOf(key, dir),
             warning: MODELS[key].warning,
-            sizeBytes: MODELS[key].size,
+            custom: key === "custom",
+            loadError: installed ? loadErrors[key] || null : null,
+            sizeBytes: installed ? sizeOf(key, dir) : MODELS[key].size,
             installed,
             downloading: state.downloading,
-            progress: installed ? 1 : Math.min(1, received / MODELS[key].size),
+            progress: installed ? 1 : Math.min(1, received / Math.max(1, MODELS[key].size)),
             error: installed ? null : state.error,
             active: installed && activeKey === key,
-            ...memoryInfo(key)
+            ...memoryInfo(key, dir)
         };
     }
 
@@ -404,7 +460,10 @@ async function generate(key, dir, request, onChunk, signal) {
     try {
         if (!worker) await startWorker(key, dir);
         else await ready;
+
+        loadErrors[key] = null;
     } catch (error) {
+        loadErrors[key] = error.message || "The model could not be loaded";
         stopWorker();
         throw error;
     }
@@ -427,13 +486,54 @@ async function generate(key, dir, request, onChunk, signal) {
             type: "generate",
             id,
             system: String(request.system || ""),
-            prompt: String(request.prompt || "") + (MODELS[key].noThink ? " /no_think" : ""),
+            prompt: String(request.prompt || ""),
             maxTokens: Math.max(16, Math.min(400, Number(request.maxTokens) || 160))
         });
     });
 }
 
+function uploadCustom(req, dir, fileName) {
+    return new Promise((resolve, reject) => {
+        fs.mkdirSync(dir, { recursive: true });
+
+        if (activeKey === "custom") stopWorker();
+
+        const target = modelPath("custom", dir);
+        const partPath = target + ".part";
+        const out = fs.createWriteStream(partPath);
+        let head = Buffer.alloc(0);
+
+        function fail(error) {
+            out.destroy();
+            fs.rmSync(partPath, { force: true });
+            reject(error);
+        }
+
+        req.on("data", chunk => {
+            if (head.length < 4) head = Buffer.concat([head, chunk]).subarray(0, 4);
+        });
+
+        req.on("error", fail);
+        req.on("aborted", () => fail(new Error("Upload cancelled")));
+        out.on("error", fail);
+
+        out.on("finish", () => {
+            if (head.toString("latin1") !== "GGUF") {
+                return fail(new Error("That file is not a GGUF model"));
+            }
+
+            fs.renameSync(partPath, target);
+            fs.writeFileSync(customInfoPath(dir), JSON.stringify({ name: fileName }));
+            loadErrors.custom = null;
+            resolve();
+        });
+
+        req.pipe(out);
+    });
+}
+
 module.exports = {
+    uploadCustom,
     start,
     cancel,
     remove,

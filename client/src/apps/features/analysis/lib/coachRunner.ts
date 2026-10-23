@@ -8,7 +8,8 @@ import {
     buildSummaryPrompt,
     selectMoveNodes,
     cleanCoachText,
-    coachTextIsGrounded
+    coachTextIsGrounded,
+    coachTextIsSane
 } from "./coachPrompt";
 
 interface Job {
@@ -108,7 +109,7 @@ export function requestMoveComment(
                 const cleaned = text ? cleanCoachText(text) : "";
                 const current = useCoachStore.getState();
 
-                if (cleaned && coachTextIsGrounded(cleaned, prompt)) {
+                if (cleaned && coachTextIsSane(cleaned) && coachTextIsGrounded(cleaned, prompt)) {
                     current.patch({
                         comments: { ...current.comments, [node.id]: cleaned },
                         done: current.done + 1
@@ -170,7 +171,7 @@ export async function runCoachForGame(
 
                 const cleaned = text ? cleanCoachText(text) : "";
 
-                if (cleaned && coachTextIsGrounded(cleaned, summaryPrompt)) useCoachStore.getState().patch({ summary: cleaned });
+                if (cleaned && coachTextIsSane(cleaned) && coachTextIsGrounded(cleaned, summaryPrompt)) useCoachStore.getState().patch({ summary: cleaned });
             } finally {
                 if (myEpoch == epoch) useCoachStore.getState().patch({ summaryPending: false });
             }
