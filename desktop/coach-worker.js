@@ -5,6 +5,8 @@ let QwenChatWrapper = null;
 let loading = null;
 let thinkingModel = false;
 
+const THOUGHT_TOKENS = 400;
+
 const controllers = new Map();
 
 function reply(message) {
@@ -32,7 +34,7 @@ async function load(message) {
             threads: message.threads
         });
 
-        reply({ type: "ready", id: message.id });
+        reply({ type: "ready", id: message.id, thinking: thinkingModel });
     } catch (error) {
         reply({ type: "error", id: message.id, error: String(error && error.message || error) });
     }
@@ -51,7 +53,7 @@ async function generate(message) {
             contextSequence: sequence,
             systemPrompt: message.system,
             chatWrapper: thinkingModel
-                ? new QwenChatWrapper({ thoughts: "discourage" })
+                ? new QwenChatWrapper({ thoughts: message.think ? "auto" : "discourage" })
                 : undefined
         });
 
@@ -59,6 +61,7 @@ async function generate(message) {
 
         await session.prompt(message.prompt, {
             maxTokens: message.maxTokens,
+            budgets: thinkingModel && message.think ? { thoughtTokens: THOUGHT_TOKENS } : undefined,
             temperature: 0.25,
             topP: 0.9,
             signal: controller.signal,

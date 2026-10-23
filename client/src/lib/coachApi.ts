@@ -6,6 +6,7 @@ export interface CoachModelStatus {
     warning: string | null;
     custom: boolean;
     loadError: string | null;
+    thinking: boolean;
     sizeBytes: number;
     installed: boolean;
     downloading: boolean;
@@ -93,13 +94,14 @@ export async function generateCoachText(
     system: string,
     prompt: string,
     maxTokens: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    think?: boolean
 ): Promise<string | null> {
     try {
         const response = await fetch("/api/coach/generate", {
             method: "POST",
             headers: json,
-            body: JSON.stringify({ model, system, prompt, maxTokens }),
+            body: JSON.stringify({ model, system, prompt, maxTokens, think }),
             signal
         });
 

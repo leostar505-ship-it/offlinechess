@@ -3,6 +3,7 @@ import { getTopEngineLine } from "shared/types/game/position/EngineLine";
 import Evaluation from "shared/types/game/position/Evaluation";
 import { Classification } from "shared/constants/Classification";
 import { getGameAccuracy } from "shared/lib/reporter/accuracy";
+import { Chess } from "chess.js";
 
 const MOVE_RULES = [
     "You are a friendly chess coach. You explain in plain words why a move got its rating.",
@@ -14,6 +15,18 @@ const MOVE_RULES = [
 
 export function moveSystemPrompt() {
     return MOVE_RULES;
+}
+
+const SELF_RULES = [
+    "You are a friendly chess coach. Look at the board and the engine's analysis, then explain in plain words why a move got its rating.",
+    "You may reason about the position yourself, such as what each side threatens, which pieces are attacked or defended, and what the better move achieves.",
+    "Only name moves that appear in the engine's analysis or the move played, exactly as written. Never invent captures that are not on the board.",
+    "Say what happened and why it matters, in two or three short sentences. Do not repeat the rating or any numbers.",
+    "Refer to the sides as White and Black. No headings, no lists, no markdown, no emoji."
+].join(" ");
+
+export function moveSelfSystemPrompt() {
+    return SELF_RULES;
 }
 
 export const SUMMARY_SYSTEM_PROMPT = [
@@ -118,6 +131,57 @@ export function buildMovePrompt(node: StateTreeNode) {
 
     return facts.join("\n")
         + "\n\nExplain to the player why this move received its rating, using only these facts.";
+}
+
+function describeBoard(fen: string) {
+    try {
+        const board = new Chess(fen).board();
+        const names: Record<string, string> = { k: "King", q: "Queen", r: "Rook", b: "Bishop", n: "Knight", p: "Pawn" };
+        const sides: Record<"w" | "b", string[]> = { w: [], b: [] };
+
+        for (const row of board) {
+            for (const square of row) {
+                if (!square) continue;
+
+                sides[square.color].push(names[square.type] + " " + square.square);
+            }
+        }
+
+        return "White pieces: " + sides.w.join(", ") + "\nBlack pieces: " + sides.b.join(", ");
+    } catch {
+        return "";
+    }
+}
+
+export function buildSelfPrompt(node: StateTreeNode) {
+    const parent = node.parent;
+
+    if (!parent || !node.state.move || !node.state.classification) return null;
+
+    const side = sideOf(node);
+    const before = getTopEngineLine(parent.state.engineLines);
+    const after = getTopEngineLine(node.state.engineLines);
+
+    const facts = [
+        "Position before the move:",
+        describeBoard(parent.state.fen),
+        "",
+        "Move played: " + moveLabel(node) + " by " + side,
+        "Rating: " + ratingNames[node.state.classification],
+        "Evaluation before the move: " + describeEvaluation(before?.evaluation, side),
+        "Evaluation after the move: " + describeEvaluation(after?.evaluation, side)
+    ];
+
+    if (before?.moves.length) {
+        facts.push("The engine's best line was: " + before.moves.slice(0, 5).map(move => move.san).join(" "));
+    }
+
+    if (after?.moves.length) {
+        facts.push("After the move the engine expects: " + after.moves.slice(0, 4).map(move => move.san).join(" "));
+    }
+
+    return facts.join("\n")
+        + "\n\nExplain to the player why this move received its rating.";
 }
 
 const SUMMARY_PRIORITY: Partial<Record<Classification, number>> = {
@@ -229,17 +293,17 @@ export function coachTextIsGrounded(text: string, prompt: string) {
 
 export type CoachProblem = "short" | "repeat" | "squares";
 
-export function coachTextProblem(text: string, prompt: string): CoachProblem | null {
+export function coachTextProblem(text: string, prompt: string, self = false): CoachProblem | null {
     if (text.length < 20) return "short";
 
-    if (!coachTextIsSane(text)) return "repeat";
+    if (!coachTextIsSane(text, self)) return "repeat";
 
     if (!coachTextIsGrounded(text, prompt)) return "squares";
 
     return null;
 }
 
-export function coachTextIsSane(text: string) {
+export function coachTextIsSane(text: string, self = false) {
     if (text.length < 20) return false;
 
     const sentences = text
@@ -248,6 +312,8 @@ export function coachTextIsSane(text: string) {
         .filter(sentence => sentence.length > 0);
 
     if (new Set(sentences).size != sentences.length) return false;
+
+    if (self) return !/received its rating|verified findings/i.test(text);
 
     return !/evaluation (before|after)|move played|opponent's best|received its rating|verified findings|engine's best/i.test(text);
 }

@@ -53,6 +53,17 @@
     text-decoration: underline;
 }
 
+.coachMode {
+    width: fit-content;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: #b9c0cc;
+}
+
+.coachMode:hover {
+    text-decoration: underline;
+}
+
 .coachAskFailed {
     width: fit-content;
     font-size: 0.9rem;

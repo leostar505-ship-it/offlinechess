@@ -1,8 +1,11 @@
 import { StateTreeNode } from "shared/types/game/position/StateTreeNode";
 import { generateCoachText, getCoachStatus, CoachModelKey, CoachCoverage } from "@/lib/coachApi";
 import useCoachStore from "@analysis/stores/CoachStore";
+import { CoachMode, coachKey, isSelfMode, isThinkingMode } from "./coachModes";
 import {
     moveSystemPrompt,
+    moveSelfSystemPrompt,
+    buildSelfPrompt,
     SUMMARY_SYSTEM_PROMPT,
     buildMovePrompt,
     buildSummaryPrompt,
@@ -101,28 +104,42 @@ function setFailure(id: string, reason?: keyof typeof FAILURE_MESSAGES) {
 export function requestMoveComment(
     node: StateTreeNode,
     model: CoachModelKey,
-    priority: number
+    priority: number,
+    mode: CoachMode = "grounded"
 ) {
+    if (mode == "stockfish") return;
+
+    const key = coachKey(node.id, mode);
     const store = useCoachStore.getState();
 
-    if (store.comments[node.id] || store.pending[node.id]) return;
+    if (store.comments[key] || store.pending[key]) return;
 
-    const prompt = buildMovePrompt(node);
+    const self = isSelfMode(mode);
+    const thinking = isThinkingMode(mode);
+    const prompt = self ? buildSelfPrompt(node) : buildMovePrompt(node);
     if (!prompt) return;
 
+    const system = self ? moveSelfSystemPrompt() : moveSystemPrompt();
     const myEpoch = epoch;
 
-    setPending(node.id, true);
-    setFailure(node.id);
+    setPending(key, true);
+    setFailure(key);
 
     enqueue({
-        key: "move:" + node.id,
+        key: "move:" + key,
         priority,
         async run(signal) {
             try {
                 if (myEpoch != epoch) return;
 
-                const text = await generateCoachText(model, moveSystemPrompt(), prompt, 90, signal);
+                const text = await generateCoachText(
+                    model,
+                    system,
+                    prompt,
+                    thinking ? 520 : 90,
+                    signal,
+                    thinking
+                );
 
                 if (myEpoch != epoch) return;
 
@@ -130,27 +147,27 @@ export function requestMoveComment(
                 const current = useCoachStore.getState();
 
                 if (!cleaned) {
-                    setFailure(node.id, "empty");
+                    setFailure(key, "empty");
                     current.patch({ done: current.done + 1 });
                     return;
                 }
 
-                const problem = coachTextProblem(cleaned, prompt);
+                const problem = coachTextProblem(cleaned, prompt, self);
 
                 if (problem) {
-                    setFailure(node.id, problem);
+                    setFailure(key, problem);
                     current.patch({ done: current.done + 1 });
                     return;
                 }
 
                 current.patch({
-                    comments: { ...current.comments, [node.id]: cleaned },
+                    comments: { ...current.comments, [key]: cleaned },
                     done: current.done + 1
                 });
             } catch {
-                if (myEpoch == epoch) setFailure(node.id, "unknown");
+                if (myEpoch == epoch) setFailure(key, "unknown");
             } finally {
-                if (myEpoch == epoch) setPending(node.id, false);
+                if (myEpoch == epoch) setPending(key, false);
             }
         }
     });

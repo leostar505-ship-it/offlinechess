@@ -62,6 +62,7 @@ const allowedHosts = [
 
 const states = {};
 const loadErrors = {};
+const thinkingSupport = { compact: true, huge: true, small: false, large: false, custom: false };
 
 for (const key of Object.keys(MODELS)) {
     states[key] = { downloading: false, received: 0, error: null, abort: null };
@@ -315,6 +316,7 @@ function getStatus(dir) {
             label: labelOf(key, dir),
             warning: MODELS[key].warning,
             custom: key === "custom",
+            thinking: !!thinkingSupport[key],
             loadError: installed ? loadErrors[key] || null : null,
             sizeBytes: installed ? sizeOf(key, dir) : MODELS[key].size,
             installed,
@@ -397,6 +399,10 @@ function startWorker(key, dir) {
 
         pending.delete(message.id);
 
+        if (message.type === "ready" && message.id === 0 && activeKey === key) {
+            thinkingSupport[key] = !!message.thinking;
+        }
+
         if (message.type === "error") entry.reject(new Error(message.error));
         else entry.resolve(message.text);
 
@@ -462,7 +468,8 @@ async function generate(key, dir, request, onChunk, signal) {
             id,
             system: String(request.system || ""),
             prompt: String(request.prompt || ""),
-            maxTokens: Math.max(16, Math.min(400, Number(request.maxTokens) || 160))
+            think: request.think === true,
+            maxTokens: Math.max(16, Math.min(request.think === true ? 600 : 400, Number(request.maxTokens) || 160))
         });
     });
 }

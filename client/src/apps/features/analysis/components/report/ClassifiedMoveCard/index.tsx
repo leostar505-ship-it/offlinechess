@@ -26,6 +26,12 @@ import playBoardSound from "@/lib/boardSounds";
 import { getCoachStatus } from "@/lib/coachApi";
 import useCoachStore from "@analysis/stores/CoachStore";
 import { requestMoveComment } from "@analysis/lib/coachRunner";
+import {
+    CoachMode,
+    COACH_MODE_LABELS,
+    availableCoachModes,
+    coachKey
+} from "@analysis/lib/coachModes";
 
 import * as styles from "./ClassifiedMoveCard.module.css";
 
@@ -79,23 +85,42 @@ function ClassifiedMoveCard() {
     useEffect(() => setRealtimeClassifyError(), [node]);
 
     const coachSettings = settings.analysis.coach;
-    const coachComment = useCoachStore(state => state.comments[node.id]);
-    const coachPending = useCoachStore(state => !!state.pending[node.id]);
-    const coachFailure = useCoachStore(state => state.failures[node.id]);
+    const coachReplaces = ["small", "large", "huge"].includes(coachSettings.model);
+    const chosenMode = useCoachStore(state => state.mode);
     const [coachReady, setCoachReady] = useState(false);
+    const [coachThinking, setCoachThinking] = useState(false);
+
+    const coachModes = availableCoachModes(coachThinking);
+    const defaultMode: CoachMode = coachReplaces ? "grounded" : "stockfish";
+    const activeMode = chosenMode && coachModes.includes(chosenMode) ? chosenMode : defaultMode;
+    const modeKey = coachKey(node.id, activeMode);
+    const aiMode = activeMode != "stockfish";
+
+    const coachComment = useCoachStore(state => state.comments[modeKey]);
+    const coachPending = useCoachStore(state => !!state.pending[modeKey]);
+    const coachFailure = useCoachStore(state => state.failures[modeKey]);
 
     useEffect(() => {
-        if (!coachSettings.enabled) return setCoachReady(false);
+        if (!coachSettings.enabled) {
+            setCoachReady(false);
+            return;
+        }
 
-        getCoachStatus().then(status => (
-            setCoachReady(!!status?.models[coachSettings.model].installed)
-        ));
+        getCoachStatus().then(status => {
+            setCoachReady(!!status?.models[coachSettings.model].installed);
+            setCoachThinking(!!status?.models[coachSettings.model].thinking);
+        });
     }, [coachSettings.enabled, coachSettings.model]);
 
-    const coachReplaces = ["small", "large", "huge"].includes(coachSettings.model);
+    function cycleMode() {
+        const next = coachModes[(coachModes.indexOf(activeMode) + 1) % coachModes.length];
+
+        useCoachStore.getState().patch({ mode: next });
+    }
 
     const coachCanComment = (
         coachReady
+        && aiMode
         && !!node.parent
         && !!node.state.classification
         && !coachComment
@@ -108,12 +133,12 @@ function ClassifiedMoveCard() {
         if (!coachAutoAllowed || coachSettings.coverage != "current") return;
 
         const timer = setTimeout(
-            () => requestMoveComment(node, coachSettings.model, 2),
+            () => requestMoveComment(node, coachSettings.model, 2, activeMode),
             600
         );
 
         return () => clearTimeout(timer);
-    }, [node, coachAutoAllowed, coachSettings.coverage, coachSettings.model]);
+    }, [node, coachAutoAllowed, coachSettings.coverage, coachSettings.model, activeMode]);
 
     const nearestOpeningName = findNodeRecursively(
         node,
@@ -191,7 +216,7 @@ function ClassifiedMoveCard() {
             }
 
             {node.state.classification
-                && (coachReplaces && coachComment
+                && (aiMode && coachComment
                     ? <span className={styles.explanation}>{coachComment}</span>
                     : node.state.explanation
                         && <span className={styles.explanation}>
@@ -200,14 +225,17 @@ function ClassifiedMoveCard() {
                 )
             }
 
-            {coachComment
-                && !coachReplaces
-                && <span className={styles.coachNote}>Coach: {coachComment}</span>
+            {coachReady
+                && !!node.parent
+                && !!node.state.classification
+                && <span className={styles.coachMode} onClick={cycleMode}>
+                    Analysis: {COACH_MODE_LABELS[activeMode]} (click to switch)
+                </span>
             }
 
             {coachPending
                 && <span className={styles.coachNote}>
-                    The coach is thinking...
+                    {activeMode.startsWith("thinking") ? "The coach is thinking it through, this can take a while..." : "The coach is thinking..."}
                 </span>
             }
 
@@ -215,7 +243,7 @@ function ClassifiedMoveCard() {
                 && (coachSettings.coverage != "current" || !!coachFailure)
                 && <span
                     className={coachFailure ? styles.coachAskFailed : styles.coachAsk}
-                    onClick={() => requestMoveComment(node, coachSettings.model, 2)}
+                    onClick={() => requestMoveComment(node, coachSettings.model, 2, activeMode)}
                 >
                     {coachFailure ? "Ask the coach again" : "Ask the coach about this move"}
                 </span>
