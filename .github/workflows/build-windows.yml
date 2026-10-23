@@ -69,6 +69,7 @@ jobs:
             - Model downloads now reconnect and resume by themselves if the connection drops or stalls
             - The AI coach model list is now online: opening the model dropdown checks the models-list release on GitHub for new models, with a RAM warning based on the size in each model's name. The privacy notice mentions this
             - Model downloads can be paused and resumed, with a button to delete a partial download
+            - Hotfix: the built-in explanations name the side (White's pawn, Black's advantage) instead of saying your pawn or your advantage, so they make sense whichever side you play
             - Clearer wording when a move throws away your advantage
             - Removed the three smallest AI sizes, they could not analyse, and weaker models no longer replace the normal explanation
 

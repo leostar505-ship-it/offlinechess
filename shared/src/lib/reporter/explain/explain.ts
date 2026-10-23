@@ -487,7 +487,28 @@ function explainBrilliant(ctx: Context) {
     return `${head}, but the attack and piece activity you get are worth more than the material.`;
 }
 
+function nameTheSide(text: string, side: string) {
+    return text
+        .replace(/\bYou sacrificed your\b/g, side + " sacrificed their")
+        .replace(/\bbut you win\b/g, "but " + side + " wins")
+        .replace(/\bYou had\b/g, side + " had")
+        .replace(/\b[Yy]our\b/g, side + "'s")
+        .replace(/\b[Yy]ou\b/g, side);
+}
+
 export function explainMove(
+    node: StateTreeNode,
+    previous: ExtractedPreviousNode,
+    current: ExtractedCurrentNode,
+    classification: Classification,
+    options?: AnalysisOptions
+): string | undefined {
+    const text = explainMoveFor(node, previous, current, classification, options);
+
+    return text && nameTheSide(text, colourWord(current.playedMove.color));
+}
+
+function explainMoveFor(
     node: StateTreeNode,
     previous: ExtractedPreviousNode,
     current: ExtractedCurrentNode,
