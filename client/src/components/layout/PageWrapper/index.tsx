@@ -4,6 +4,7 @@ import { ToastContainer } from "react-toastify";
 
 import NavigationBar from "@/components/layout/NavigationBar";
 import Footer from "@/components/layout/Footer";
+import PrivacyNotice from "@/components/layout/PrivacyNotice";
 
 import PageWrapperProps from "./PageWrapperProps";
 import * as styles from "./PageWrapper.module.css";
@@ -33,6 +34,8 @@ function PageWrapper({
             <Footer className={footerClassName} style={footerStyle} />
 
             <ToastContainer/>
+
+            <PrivacyNotice/>
         </div>
     </QueryClientProvider>;
 }
