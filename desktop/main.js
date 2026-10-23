@@ -495,6 +495,8 @@ if (!app.requestSingleInstanceLock()) {
     app.whenReady().then(async () => {
         Menu.setApplicationMenu(null);
 
+        coach.cleanupRetired(userCoachDir());
+
         await startServer();
         installNetworkGuard();
         createWindow();

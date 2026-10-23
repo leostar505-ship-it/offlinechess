@@ -1,20 +1,20 @@
-import { Chess } from "chess.js";
-
 import { StateTreeNode, getNodeChain } from "shared/types/game/position/StateTreeNode";
 import { getTopEngineLine } from "shared/types/game/position/EngineLine";
 import Evaluation from "shared/types/game/position/Evaluation";
 import { Classification } from "shared/constants/Classification";
 import { getGameAccuracy } from "shared/lib/reporter/accuracy";
 
-export const MOVE_SYSTEM_PROMPT = [
-    "You are a friendly, encouraging chess coach, like the coach in a chess review.",
-    "You explain why one move got its rating, in plain language a club player understands.",
-    "Use ONLY the facts you are given. Never invent moves, captures, threats or evaluations.",
-    "Only mention moves that appear in the facts, exactly as written. Do not output move lists or variations.",
-    "Refer to the side by colour (White or Black) exactly as given. Write one or two short sentences.",
-    "Explain the idea behind the verified findings; do not give general advice.",
-    "No headings, no bullet points, no markdown, no emoji."
+const MOVE_RULES = [
+    "You are a friendly chess coach. You explain in plain words why a move got its rating.",
+    "Use ONLY the verified findings you are given. Never invent moves, captures or threats.",
+    "Only mention moves that appear in the findings, exactly as written.",
+    "Say what happened and why it matters, in one or two short sentences. Do not repeat the rating or any numbers.",
+    "Refer to the sides as White and Black. No headings, no lists, no markdown, no emoji."
 ].join(" ");
+
+export function moveSystemPrompt() {
+    return MOVE_RULES;
+}
 
 export const SUMMARY_SYSTEM_PROMPT = [
     "You are a friendly, encouraging chess coach writing a short review of a finished game.",
@@ -66,7 +66,7 @@ function describeEvaluation(evaluation: Evaluation | undefined, side: "White" | 
 
     const holder = pawns > 0 ? side : (side == "White" ? "Black" : "White");
 
-    return holder + " is " + size + " (" + (pawns > 0 ? "+" : "") + pawns.toFixed(1) + " for " + side + ")";
+    return holder + " is " + size;
 }
 
 function moveLabel(node: StateTreeNode) {
@@ -78,21 +78,11 @@ function moveLabel(node: StateTreeNode) {
         : fullmove + "..." + node.state.move?.san;
 }
 
-const pieceNames: Record<string, string> = {
-    k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn"
-};
-
-function describeBoard(fen: string) {
-    const board = new Chess(fen);
-    const sides: Record<string, string[]> = { w: [], b: [] };
-
-    for (const row of board.board()) {
-        for (const piece of row) {
-            if (piece) sides[piece.color].push(pieceNames[piece.type] + " " + piece.square);
-        }
-    }
-
-    return "White: " + sides.w.join(", ") + "\nBlack: " + sides.b.join(", ");
+function nameTheMover(text: string, side: "White" | "Black") {
+    return text
+        .replace(/\b[Yy]our\b/g, side + "'s")
+        .replace(/\btakes you\b/g, "takes " + side)
+        .replace(/\b[Yy]ou\b/g, side);
 }
 
 export function buildMovePrompt(node: StateTreeNode) {
@@ -110,7 +100,6 @@ export function buildMovePrompt(node: StateTreeNode) {
     const facts = [
         "Move played: " + moveLabel(node) + " by " + side,
         "Rating: " + ratingNames[node.state.classification],
-        "Pieces before the move:\n" + describeBoard(parent.state.fen),
         "Evaluation before the move: " + describeEvaluation(before?.evaluation, side),
         "Evaluation after the move: " + describeEvaluation(after?.evaluation, side)
     ];
@@ -124,7 +113,7 @@ export function buildMovePrompt(node: StateTreeNode) {
     }
 
     if (node.state.explanation) {
-        facts.push("Verified findings:\n" + node.state.explanation);
+        facts.push("Verified findings:\n" + nameTheMover(node.state.explanation, side));
     }
 
     return facts.join("\n")
@@ -246,5 +235,7 @@ export function coachTextIsSane(text: string) {
         .map(sentence => sentence.trim().toLowerCase())
         .filter(sentence => sentence.length > 0);
 
-    return new Set(sentences).size == sentences.length;
+    if (new Set(sentences).size != sentences.length) return false;
+
+    return !/evaluation (before|after)|move played|opponent's best|received its rating|verified findings|engine's best/i.test(text);
 }

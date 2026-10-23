@@ -31,7 +31,7 @@ const settingsSchema = z.object({
         simpleNotation: z.boolean(),
         coach: z.object({
             enabled: z.boolean(),
-            model: z.enum(["pico", "nano", "tiny", "compact", "small", "large", "huge", "custom"]),
+            model: z.enum(["compact", "small", "large", "huge", "custom"]),
             coverage: z.enum(["key", "all", "current"])
         })
     }),
@@ -92,6 +92,10 @@ function fetchSettings() {
 
     try {
         const merged = merge(defaultSettingsCopy, JSON.parse(value));
+
+        if (!["compact", "small", "large", "huge", "custom"].includes(merged.analysis.coach.model)) {
+            merged.analysis.coach.model = "compact";
+        }
 
         if (!Object.values(EngineVersion).includes(merged.analysis.engine.version)) {
             merged.analysis.engine.version = defaultSettings.analysis.engine.version;

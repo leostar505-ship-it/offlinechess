@@ -20,9 +20,6 @@ import SwitchSetting from "@/components/settings/SwitchSetting";
 import * as styles from "../SettingsDialog.module.css";
 
 const modelOptions: { label: string; value: CoachModelKey }[] = [
-    { label: "Pico (0.3 GB)", value: "pico" },
-    { label: "Nano (0.4 GB)", value: "nano" },
-    { label: "Tiny (0.6 GB)", value: "tiny" },
     { label: "Compact (1.8 GB)", value: "compact" },
     { label: "Standard (2.5 GB)", value: "small" },
     { label: "High quality (4 GB)", value: "large" },

@@ -91,6 +91,8 @@ function ClassifiedMoveCard() {
         ));
     }, [coachSettings.enabled, coachSettings.model]);
 
+    const coachReplaces = ["small", "large", "huge"].includes(coachSettings.model);
+
     const coachCanComment = (
         coachReady
         && !!node.parent
@@ -186,10 +188,18 @@ function ClassifiedMoveCard() {
             }
 
             {node.state.classification
-                && (coachComment || node.state.explanation)
-                && <span className={styles.explanation}>
-                    {coachComment || node.state.explanation}
-                </span>
+                && (coachReplaces && coachComment
+                    ? <span className={styles.explanation}>{coachComment}</span>
+                    : node.state.explanation
+                        && <span className={styles.explanation}>
+                            {node.state.explanation}
+                        </span>
+                )
+            }
+
+            {coachComment
+                && !coachReplaces
+                && <span className={styles.coachNote}>Coach: {coachComment}</span>
             }
 
             {coachPending

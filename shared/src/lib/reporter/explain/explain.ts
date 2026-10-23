@@ -63,6 +63,7 @@ interface Context {
 }
 
 const tierNames = ["losing", "worse", "equal", "better", "winning"];
+const droppedTierPhrases = ["a losing one", "a worse one", "an equal one", "only a slightly better one"];
 
 function tierOf(evaluation: Evaluation) {
     if (evaluation.type == "mate") return evaluation.value > 0 ? 4 : 0;
@@ -115,6 +116,10 @@ function standingPhrase(evaluation: Evaluation) {
     return "Puts up the toughest resistance in a very difficult position";
 }
 
+function bestFromSquare(ctx: Context) {
+    return ctx.previous.topMove.from;
+}
+
 function buildFacts(ctx: Context): MoveFacts {
     return {
         before: ctx.before,
@@ -124,6 +129,7 @@ function buildFacts(ctx: Context): MoveFacts {
         opponent: ctx.opponent,
         parentMove: ctx.parentMove,
         ownPreviousTo: ctx.ownPreviousTo,
+        bestMoveFrom: bestFromSquare(ctx),
         subjective: ctx.currSubj,
         lineBoard: ctx.playedOutcome.board
     };
@@ -342,7 +348,7 @@ function swingSentence(ctx: Context) {
     const after = tierOf(ctx.currSubj);
 
     if (after < before) {
-        return `This takes you from ${withArticle(tierNames[before])} position to ${withArticle(tierNames[after])} one`;
+        return `This takes you from ${withArticle(tierNames[before])} position to ${droppedTierPhrases[after]}`;
     }
 
     return `The evaluation for you drops from ${stringifyEvaluation(ctx.prevSubj, true)} to ${stringifyEvaluation(ctx.currSubj, true)}, handing ${colourWord(ctx.opponent)} more of the initiative`;

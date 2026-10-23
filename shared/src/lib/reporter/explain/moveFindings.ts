@@ -50,6 +50,7 @@ export interface MoveFacts {
     opponent: Color;
     parentMove?: { to: Square; captured: boolean };
     ownPreviousTo?: Square;
+    bestMoveFrom?: Square;
     subjective?: Evaluation;
     lineBoard?: Chess;
 }
@@ -660,6 +661,7 @@ export function moveDrawbacks(facts: MoveFacts): Finding[] {
         && move.piece != PAWN
         && move.piece != KING
         && facts.ownPreviousTo == move.from
+        && facts.bestMoveFrom != facts.ownPreviousTo
     ) {
         findings.push({
             text: "Moves the same piece twice in the opening instead of developing another one",

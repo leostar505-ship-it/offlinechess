@@ -1,4 +1,4 @@
-export type CoachModelKey = "pico" | "nano" | "tiny" | "compact" | "small" | "large" | "huge" | "custom";
+export type CoachModelKey = "compact" | "small" | "large" | "huge" | "custom";
 export type CoachCoverage = "key" | "all" | "current";
 
 export interface CoachModelStatus {

@@ -2,7 +2,7 @@ import { StateTreeNode } from "shared/types/game/position/StateTreeNode";
 import { generateCoachText, getCoachStatus, CoachModelKey, CoachCoverage } from "@/lib/coachApi";
 import useCoachStore from "@analysis/stores/CoachStore";
 import {
-    MOVE_SYSTEM_PROMPT,
+    moveSystemPrompt,
     SUMMARY_SYSTEM_PROMPT,
     buildMovePrompt,
     buildSummaryPrompt,
@@ -102,7 +102,7 @@ export function requestMoveComment(
             try {
                 if (myEpoch != epoch) return;
 
-                const text = await generateCoachText(model, MOVE_SYSTEM_PROMPT, prompt, 90, signal);
+                const text = await generateCoachText(model, moveSystemPrompt(), prompt, 90, signal);
 
                 if (myEpoch != epoch) return;
 

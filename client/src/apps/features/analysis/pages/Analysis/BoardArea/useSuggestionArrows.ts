@@ -8,9 +8,11 @@ import { classificationColours } from "@analysis/constants/classifications";
 import EngineArrowType from "@analysis/constants/EngineArrowType";
 import useSettingsStore from "@/stores/SettingsStore";
 import useAnalysisBoardStore from "@analysis/stores/AnalysisBoardStore";
+import { getThreatArrows, getBestResultArrows } from "@analysis/lib/arrowInsights";
 import useRealtimeEngineStore from "@analysis/stores/RealtimeEngineStore";
 
 const arrowColour = classificationColours[Classification.BEST];
+const threatColour = "#f5a623cc";
 
 function useSuggestionArrows(): Arrow[] {
     const settings = useSettingsStore(state => state.settings.analysis);
@@ -42,6 +44,26 @@ function useSuggestionArrows(): Arrow[] {
             const previousTopMove = parseUciMove(previousTopUci);
 
             return [[previousTopMove.from, previousTopMove.to, arrowColour]];
+        }
+
+        if (arrowsType == EngineArrowType.BEST_RESULT) {
+            const topLine = displayedEngineLines.at(0);
+            if (!topLine) return [];
+
+            return getBestResultArrows(
+                node.state.fen,
+                topLine.evaluation,
+                topLine.moves
+            ).map(arrow => [arrow.from, arrow.to, arrowColour]);
+        }
+
+        if (arrowsType == EngineArrowType.MOVE_THREATS) {
+            const uci = node.state.move?.uci;
+            if (!uci) return [];
+
+            return getThreatArrows(node.state.fen, uci).map(
+                arrow => [arrow.from, arrow.to, threatColour]
+            );
         }
 
         return [];

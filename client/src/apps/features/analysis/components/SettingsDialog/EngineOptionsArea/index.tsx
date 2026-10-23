@@ -83,6 +83,14 @@ function EngineOptionsArea() {
         {
             label: t("settings.engine.suggestionArrows.alternative"),
             value: EngineArrowType.TOP_ALTERNATIVE
+        },
+        {
+            label: "Best Result",
+            value: EngineArrowType.BEST_RESULT
+        },
+        {
+            label: "Move Threats",
+            value: EngineArrowType.MOVE_THREATS
         }
     ], [i18n.language]);
 
@@ -262,6 +270,11 @@ function EngineOptionsArea() {
                 {t("settings.engine.descriptions.suggestionArrows.continuation")}
                 <br/><br/>
                 {t("settings.engine.descriptions.suggestionArrows.alternative")}
+                <br/><br/>
+                Best Result: when the best line is a strong attack, such as a sacrifice that leads to
+                checkmate or wins material, it draws the key moves of that line. Otherwise it shows the best move.
+                <br/><br/>
+                Move Threats: draws orange arrows from the piece that just moved to the enemy pieces it now attacks.
             </Tooltip>
 
             <DropdownSetting

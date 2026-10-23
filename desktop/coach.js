@@ -7,18 +7,9 @@ const { fork } = require("child_process");
 
 const HF = "https://huggingface.co/";
 
-const TOO_SMALL_WARNING = "Yeah at this point twin you're cooked if you try to learn off of these \u{1F62D}\u{1F64F}";
 const CUSTOM_WARNING = "Your own model must be a GGUF file that works with the host this app uses (llama.cpp through node-llama-cpp). Newer or unusual model types may fail to load, bigger models need more RAM, and the comments are only as good as the model you pick.";
 
 const MODELS = {
-    tiny: {
-        label: "Tiny (about 0.6 GB)",
-        repo: "unsloth/Qwen3-0.6B-GGUF",
-        name: "Qwen3-0.6B-Q8_0.gguf",
-        size: 639447744,
-        sha256: "e150ed544dfe6016930c026a93913a5e3184181ebfe6ab2223ae01dd0491784c",
-        warning: "Lower quality analysis. Use this only if you are data limited or do not have enough RAM for a bigger model."
-    },
     compact: {
         label: "Compact (about 1.8 GB)",
         repo: "unsloth/Qwen3-1.7B-GGUF",
@@ -26,22 +17,6 @@ const MODELS = {
         size: 1834426944,
         sha256: "0becaa825564295d82e9af4d008bca5f8b7f5f73bf1c6a0b58f7c53ef26b47fd",
         warning: "Lower quality analysis. Use this if you are data limited or do not have enough RAM for the Standard model."
-    },
-    nano: {
-        label: "Nano (about 0.4 GB)",
-        repo: "unsloth/Qwen3-0.6B-GGUF",
-        name: "Qwen3-0.6B-Q4_K_M.gguf",
-        size: 396705472,
-        sha256: "ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a",
-        warning: TOO_SMALL_WARNING
-    },
-    pico: {
-        label: "Pico (about 0.3 GB)",
-        repo: "unsloth/Qwen3-0.6B-GGUF",
-        name: "Qwen3-0.6B-Q2_K.gguf",
-        size: 296238784,
-        sha256: "26d035ea15c4a2853e8d20ffc56a76f6164e17dbb6c9e532c5766700c404519d",
-        warning: TOO_SMALL_WARNING
     },
     small: {
         label: "Standard (about 2.5 GB)",
@@ -492,6 +467,19 @@ async function generate(key, dir, request, onChunk, signal) {
     });
 }
 
+const retiredFiles = [
+    "Qwen3-0.6B-Q8_0.gguf",
+    "Qwen3-0.6B-Q4_K_M.gguf",
+    "Qwen3-0.6B-Q2_K.gguf"
+];
+
+function cleanupRetired(dir) {
+    for (const name of retiredFiles) {
+        fs.rmSync(path.join(dir, name), { force: true });
+        fs.rmSync(path.join(dir, name + ".part"), { force: true });
+    }
+}
+
 function uploadCustom(req, dir, fileName) {
     return new Promise((resolve, reject) => {
         fs.mkdirSync(dir, { recursive: true });
@@ -534,6 +522,7 @@ function uploadCustom(req, dir, fileName) {
 
 module.exports = {
     uploadCustom,
+    cleanupRetired,
     start,
     cancel,
     remove,
