@@ -233,6 +233,15 @@ function ClassifiedMoveCard() {
                 </span>
             }
 
+            {coachReady
+                && aiMode
+                && !!node.parent
+                && !!node.state.classification
+                && <span className={styles.coachWarning}>
+                    The model selected is an AI and might make mistakes.
+                </span>
+            }
+
             {coachPending
                 && <span className={styles.coachNote}>
                     {activeMode.startsWith("thinking") ? "The coach is thinking it through, this can take a while..." : "The coach is thinking..."}

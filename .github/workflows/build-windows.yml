@@ -47,8 +47,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4.2
-          name: Release v1.4.2
+          tag_name: v1.4.3
+          name: Release v1.4.3
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -63,6 +63,7 @@ jobs:
             - Privacy notice on every start: AI models and replies stay on your device, only the chess.com/lichess search goes online. Has a close button and a tick box to never show it again
             - When the coach cannot answer, the Ask the coach button turns red and says why (wrong squares, repeating the board, too short, model failed, unknown error) and you can ask again
             - New switch under each move to cycle the analysis between Stockfish, AI grounded (uses the app's findings) and AI self-dependent (the AI reasons from the board and engine line itself). Models with a thinking mode (Compact and Absurd, and some custom models) also get thinking versions of both, which are slower
+            - A notice appears under the analysis switch whenever an AI mode is selected, saying the model is an AI and might make mistakes
             - Clearer wording when a move throws away your advantage
             - Removed the three smallest AI sizes, they could not analyse, and weaker models no longer replace the normal explanation
 
