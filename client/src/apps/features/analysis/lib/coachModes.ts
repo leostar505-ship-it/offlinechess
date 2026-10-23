@@ -22,6 +22,8 @@ export function isSelfMode(mode: CoachMode) {
     return mode == "self" || mode == "thinking-self";
 }
 
-export function coachKey(nodeId: string, mode: CoachMode) {
-    return nodeId + "|" + mode;
+export function coachKey(nodeId: string, mode: CoachMode, extra?: string) {
+    return nodeId + "|" + mode + (extra ? "|" + extra : "");
 }
+
+export type CoachAskKind = "explain" | "why" | "ask";

@@ -25,12 +25,13 @@ import LogMessage from "@/components/common/LogMessage";
 import playBoardSound from "@/lib/boardSounds";
 import { getCoachStatus } from "@/lib/coachApi";
 import useCoachStore from "@analysis/stores/CoachStore";
-import { requestMoveComment } from "@analysis/lib/coachRunner";
+import { requestMoveComment, requestCoachAnswer } from "@analysis/lib/coachRunner";
 import {
     CoachMode,
     COACH_MODE_LABELS,
     availableCoachModes,
-    coachKey
+    coachKey,
+    CoachAskKind
 } from "@analysis/lib/coachModes";
 
 import * as styles from "./ClassifiedMoveCard.module.css";
@@ -89,6 +90,8 @@ function ClassifiedMoveCard() {
     const chosenMode = useCoachStore(state => state.mode);
     const [coachReady, setCoachReady] = useState(false);
     const [coachThinking, setCoachThinking] = useState(false);
+    const [askOpen, setAskOpen] = useState(false);
+    const [question, setQuestion] = useState("");
 
     const coachModes = availableCoachModes(coachThinking);
     const defaultMode: CoachMode = coachReplaces ? "grounded" : "stockfish";
@@ -99,6 +102,17 @@ function ClassifiedMoveCard() {
     const coachComment = useCoachStore(state => state.comments[modeKey]);
     const coachPending = useCoachStore(state => !!state.pending[modeKey]);
     const coachFailure = useCoachStore(state => state.failures[modeKey]);
+    const latestKey = useCoachStore(state => state.latest[node.id]);
+    const latestInfo = useCoachStore(state => (latestKey ? state.answerInfo[latestKey] : undefined));
+    const latestText = useCoachStore(state => (latestKey ? state.comments[latestKey] : undefined));
+    const latestPending = useCoachStore(state => !!latestKey && !!state.pending[latestKey]);
+    const latestFailure = useCoachStore(state => (latestKey ? state.failures[latestKey] : undefined));
+
+    useEffect(() => setAskOpen(false), [node]);
+
+    function askCoach(kind: CoachAskKind, text = "") {
+        requestCoachAnswer(node, coachSettings.model, kind, text, activeMode);
+    }
 
     useEffect(() => {
         if (!coachSettings.enabled) {
@@ -234,6 +248,83 @@ function ClassifiedMoveCard() {
             }
 
             {coachReady
+                && !!node.parent
+                && !!node.state.classification
+                && <span className={styles.coachAsk} onClick={() => setAskOpen(open => !open)}>
+                    {askOpen ? "Close the coach panel" : "Ask the coach about this move"}
+                </span>
+            }
+
+            {coachReady
+                && askOpen
+                && <div className={styles.askPanel}>
+                    <div className={styles.askButtons}>
+                        <span className={styles.askChoice} onClick={() => askCoach("explain")}>
+                            Explain
+                        </span>
+
+                        <span className={styles.askChoice} onClick={() => askCoach("why")}>
+                            Why this rating
+                        </span>
+                    </div>
+
+                    <form
+                        className={styles.askForm}
+                        onSubmit={event => {
+                            event.preventDefault();
+                            askCoach("ask", question);
+                            setQuestion("");
+                        }}
+                    >
+                        <input
+                            className={styles.askInput}
+                            value={question}
+                            maxLength={200}
+                            placeholder="Or ask your own question about this move"
+                            onChange={event => setQuestion(event.target.value)}
+                        />
+
+                        <button className={styles.askSend} type="submit" disabled={!question.trim()}>
+                            Ask
+                        </button>
+                    </form>
+                </div>
+            }
+
+            {latestInfo
+                && <div className={styles.answerBlock}>
+                    <span className={styles.coachMode}>
+                        {latestInfo.kind == "explain" && "Coach: how the position stands"}
+                        {latestInfo.kind == "why" && "Coach: why this rating"}
+                        {latestInfo.kind == "ask" && "You asked: " + latestInfo.question}
+                    </span>
+
+                    {latestPending
+                        && <span className={styles.coachNote}>
+                            {latestInfo.mode.startsWith("thinking")
+                                ? "The coach is thinking it through, this can take a while..."
+                                : "The coach is thinking..."}
+                        </span>
+                    }
+
+                    {latestText && <span className={styles.explanation}>{latestText}</span>}
+
+                    {latestFailure
+                        && <>
+                            <span className={styles.coachFailure}>{latestFailure}</span>
+
+                            <span
+                                className={styles.coachAskFailed}
+                                onClick={() => askCoach(latestInfo.kind, latestInfo.question)}
+                            >
+                                Try again
+                            </span>
+                        </>
+                    }
+                </div>
+            }
+
+            {coachReady
                 && aiMode
                 && !!node.parent
                 && !!node.state.classification
@@ -254,7 +345,7 @@ function ClassifiedMoveCard() {
                     className={coachFailure ? styles.coachAskFailed : styles.coachAsk}
                     onClick={() => requestMoveComment(node, coachSettings.model, 2, activeMode)}
                 >
-                    {coachFailure ? "Ask the coach again" : "Ask the coach about this move"}
+                    {coachFailure ? "Try again" : "Get a short coach comment"}
                 </span>
             }
 

@@ -1,12 +1,20 @@
 import { create } from "zustand";
 
-import { CoachMode } from "@analysis/lib/coachModes";
+import { CoachMode, CoachAskKind } from "@analysis/lib/coachModes";
+
+export interface CoachAnswerInfo {
+    kind: CoachAskKind;
+    question: string;
+    mode: CoachMode;
+}
 
 interface CoachStore {
     comments: Record<string, string>;
     pending: Record<string, boolean>;
     failures: Record<string, string>;
     mode: CoachMode | null;
+    latest: Record<string, string>;
+    answerInfo: Record<string, CoachAnswerInfo>;
     summary?: string;
     summaryPending: boolean;
     total: number;
@@ -21,6 +29,8 @@ const useCoachStore = create<CoachStore>(set => ({
     pending: {},
     failures: {},
     mode: null,
+    latest: {},
+    answerInfo: {},
     summaryPending: false,
     total: 0,
     done: 0,
@@ -30,6 +40,8 @@ const useCoachStore = create<CoachStore>(set => ({
             comments: {},
             pending: {},
             failures: {},
+            latest: {},
+            answerInfo: {},
             summary: undefined,
             summaryPending: false,
             total: 0,

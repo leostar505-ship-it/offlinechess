@@ -746,7 +746,7 @@ async function generate(key, dir, request, onChunk, signal) {
             system: String(request.system || ""),
             prompt: String(request.prompt || ""),
             think: request.think === true,
-            maxTokens: Math.max(16, Math.min(request.think === true ? 600 : 400, Number(request.maxTokens) || 160))
+            maxTokens: Math.max(16, Math.min(request.think === true ? 620 : 400, Number(request.maxTokens) || 160))
         });
     });
 }

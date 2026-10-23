@@ -1,11 +1,14 @@
 import { StateTreeNode } from "shared/types/game/position/StateTreeNode";
 import { generateCoachText, getCoachStatus, CoachModelKey, CoachCoverage } from "@/lib/coachApi";
 import useCoachStore from "@analysis/stores/CoachStore";
-import { CoachMode, coachKey, isSelfMode, isThinkingMode } from "./coachModes";
+import { CoachMode, CoachAskKind, coachKey, isSelfMode, isThinkingMode } from "./coachModes";
 import {
     moveSystemPrompt,
     moveSelfSystemPrompt,
     buildSelfPrompt,
+    buildAskPrompt,
+    askSystemPrompt,
+    cleanQuestion,
     SUMMARY_SYSTEM_PROMPT,
     buildMovePrompt,
     buildSummaryPrompt,
@@ -164,6 +167,87 @@ export function requestMoveComment(
                     comments: { ...current.comments, [key]: cleaned },
                     done: current.done + 1
                 });
+            } catch {
+                if (myEpoch == epoch) setFailure(key, "unknown");
+            } finally {
+                if (myEpoch == epoch) setPending(key, false);
+            }
+        }
+    });
+}
+
+function hashText(text: string) {
+    let hash = 5381;
+
+    for (let index = 0; index < text.length; index++) {
+        hash = ((hash * 33) ^ text.charCodeAt(index)) >>> 0;
+    }
+
+    return hash.toString(36);
+}
+
+export function requestCoachAnswer(
+    node: StateTreeNode,
+    model: CoachModelKey,
+    kind: CoachAskKind,
+    question: string,
+    mode: CoachMode
+) {
+    const effective: CoachMode = mode == "stockfish" ? "grounded" : mode;
+    const cleanedQuestion = kind == "ask" ? cleanQuestion(question) : "";
+
+    if (kind == "ask" && !cleanedQuestion) return;
+
+    const key = coachKey(node.id, effective, kind + (cleanedQuestion ? ":" + hashText(cleanedQuestion) : ""));
+    const store = useCoachStore.getState();
+
+    store.patch({
+        latest: { ...store.latest, [node.id]: key },
+        answerInfo: { ...store.answerInfo, [key]: { kind, question: cleanedQuestion, mode: effective } }
+    });
+
+    if (store.comments[key] || store.pending[key]) return;
+
+    const self = isSelfMode(effective);
+    const thinking = isThinkingMode(effective);
+    const prompt = buildAskPrompt(node, kind, cleanedQuestion, self);
+
+    if (!prompt) return;
+
+    const system = askSystemPrompt(kind, self);
+    const myEpoch = epoch;
+
+    setPending(key, true);
+    setFailure(key);
+
+    enqueue({
+        key: "ask:" + key,
+        priority: 3,
+        async run(signal) {
+            try {
+                if (myEpoch != epoch) return;
+
+                const text = await generateCoachText(
+                    model,
+                    system,
+                    prompt,
+                    thinking ? 600 : 200,
+                    signal,
+                    thinking
+                );
+
+                if (myEpoch != epoch) return;
+
+                const cleaned = text ? cleanCoachText(text) : "";
+                const current = useCoachStore.getState();
+
+                if (!cleaned) return setFailure(key, "empty");
+
+                const problem = coachTextProblem(cleaned, prompt, true);
+
+                if (problem) return setFailure(key, problem);
+
+                current.patch({ comments: { ...current.comments, [key]: cleaned } });
             } catch {
                 if (myEpoch == epoch) setFailure(key, "unknown");
             } finally {

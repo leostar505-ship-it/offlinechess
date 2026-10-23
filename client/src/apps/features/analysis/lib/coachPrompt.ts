@@ -5,6 +5,8 @@ import { Classification } from "shared/constants/Classification";
 import { getGameAccuracy } from "shared/lib/reporter/accuracy";
 import { Chess } from "chess.js";
 
+import { CoachAskKind } from "./coachModes";
+
 const MOVE_RULES = [
     "You are a friendly chess coach. You explain in plain words why a move got its rating.",
     "Use ONLY the verified findings you are given. Never invent moves, captures or threats.",
@@ -27,6 +29,22 @@ const SELF_RULES = [
 
 export function moveSelfSystemPrompt() {
     return SELF_RULES;
+}
+
+export function askSystemPrompt(kind: CoachAskKind, self: boolean) {
+    const base = self ? SELF_RULES : MOVE_RULES;
+
+    const length = kind == "ask"
+        ? "Answer the question directly in one to four short sentences."
+        : "Write three to five short sentences.";
+
+    return base
+        .replace(/Say what happened and why it matters, in (one or two|two or three) short sentences\./, length)
+        + (kind == "ask" ? " If the facts do not contain the answer, say you cannot tell from the analysis." : "");
+}
+
+export function cleanQuestion(question: string) {
+    return question.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 200);
 }
 
 export const SUMMARY_SYSTEM_PROMPT = [
@@ -151,6 +169,40 @@ function describeBoard(fen: string) {
     } catch {
         return "";
     }
+}
+
+function askInstruction(node: StateTreeNode, kind: CoachAskKind, question: string) {
+    const side = sideOf(node);
+    const opponent = side == "White" ? "Black" : "White";
+    const classification = ratingNames[node.state.classification!];
+
+    if (kind == "explain") {
+        return "Explain to the player HOW " + side + " stands after this move: say whether " + side
+            + " has an advantage or a disadvantage and what causes it, and point out how " + opponent
+            + " can respond. Use only these facts.";
+    }
+
+    if (kind == "why") {
+        return "Explain in detail why " + moveLabel(node) + " received the rating " + classification
+            + ", including what the better move would have done. Use only these facts.";
+    }
+
+    return "The player asks: \"" + cleanQuestion(question) + "\"\nAnswer the question using only these facts.";
+}
+
+export function buildAskPrompt(
+    node: StateTreeNode,
+    kind: CoachAskKind,
+    question: string,
+    self: boolean
+) {
+    const base = self ? buildSelfPrompt(node) : buildMovePrompt(node);
+
+    if (!base) return null;
+
+    const body = base.slice(0, base.lastIndexOf("\n\n"));
+
+    return body + "\n\n" + askInstruction(node, kind, question);
 }
 
 export function buildSelfPrompt(node: StateTreeNode) {

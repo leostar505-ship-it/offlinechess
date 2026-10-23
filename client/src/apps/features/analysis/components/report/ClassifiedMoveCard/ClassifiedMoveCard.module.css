@@ -70,6 +70,77 @@
     color: #9aa3b2;
 }
 
+.askPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.askButtons {
+    display: flex;
+    gap: 8px;
+}
+
+.askChoice {
+    padding: 4px 10px;
+
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    border-radius: 6px;
+    background-color: rgba(127, 183, 255, 0.18);
+    color: #cfe3ff;
+}
+
+.askChoice:hover {
+    background-color: rgba(127, 183, 255, 0.32);
+}
+
+.askForm {
+    display: flex;
+    gap: 6px;
+}
+
+.askInput {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+
+    font-size: 0.9rem;
+
+    color: white;
+    border: none;
+    border-radius: 6px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.askSend {
+    padding: 4px 12px;
+
+    font-size: 0.9rem;
+    cursor: pointer;
+
+    color: white;
+    border: none;
+    border-radius: 6px;
+    background-color: #4a7fd1;
+}
+
+.askSend:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.answerBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 .coachAskFailed {
     width: fit-content;
     font-size: 0.9rem;
