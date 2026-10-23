@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import useSettingsStore from "@/stores/SettingsStore";
 import {
     getCoachStatus,
+    refreshCoachList,
     startCoachDownload,
     cancelCoachDownload,
     removeCoachModel,
@@ -19,13 +20,14 @@ import SwitchSetting from "@/components/settings/SwitchSetting";
 
 import * as styles from "../SettingsDialog.module.css";
 
-const modelOptions: { label: string; value: CoachModelKey }[] = [
-    { label: "Compact (1.8 GB)", value: "compact" },
-    { label: "Standard (2.5 GB)", value: "small" },
-    { label: "High quality (4 GB)", value: "large" },
-    { label: "Absurd (9 GB)", value: "huge" },
-    { label: "Your own model (.gguf)", value: "custom" }
+const builtinOptions: { label: string; value: CoachModelKey }[] = [
+    { label: "Compact (1.8G)", value: "compact" },
+    { label: "Standard (2.5G)", value: "small" },
+    { label: "High quality (4G)", value: "large" },
+    { label: "Absurd (9G)", value: "huge" }
 ];
+
+const customOption = { label: "Your own model (.gguf)", value: "custom" };
 
 const coverageOptions: { label: string; value: CoachCoverage }[] = [
     { label: "Key moments + summary", value: "key" },
@@ -39,6 +41,7 @@ function CoachOptions() {
 
     const [status, setStatus] = useState<CoachStatus | null>(null);
     const [unavailable, setUnavailable] = useState(false);
+    const [checking, setChecking] = useState(false);
     const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const fileInput = useRef<HTMLInputElement>(null);
@@ -57,6 +60,16 @@ function CoachOptions() {
 
         return () => clearInterval(timer.current);
     }, []);
+
+    function checkForModels() {
+        setChecking(true);
+
+        refreshCoachList().then(next => {
+            if (next) setStatus(next);
+
+            setChecking(false);
+        });
+    }
 
     useEffect(() => {
         clearInterval(timer.current);
@@ -80,6 +93,19 @@ function CoachOptions() {
     if (unavailable) return null;
 
     const model = status?.models[coach.model];
+
+    const modelOptions = [
+        ...builtinOptions.map(option => ({
+            ...option,
+            label: status?.models[option.value]?.label || option.label
+        })),
+        ...Object.entries(status?.models || {})
+            .filter(([, entry]) => entry.remote)
+            .map(([key, entry]) => ({ label: entry.label, value: key })),
+        customOption
+    ];
+
+    const selectedOption = modelOptions.find(option => option.value == coach.model);
 
     return <>
         <div className={styles.setting}>
@@ -106,8 +132,10 @@ function CoachOptions() {
                 <span>Model size</span>
 
                 <DropdownSetting
+                    key={selectedOption ? "selected" : "missing"}
                     options={modelOptions}
-                    defaultValue={modelOptions.find(option => option.value == coach.model)}
+                    defaultValue={selectedOption}
+                    onOpen={checkForModels}
                     onSelect={option => {
                         if (!option) return;
 
@@ -116,9 +144,26 @@ function CoachOptions() {
                             return draft;
                         });
                     }}
-                    dropdownStyle={{ width: "180px" }}
+                    dropdownStyle={{ width: "220px" }}
+                    menuStyle={{ width: "260px" }}
                 />
             </div>
+
+            {checking
+                && <LogMessage theme="info" includeIcon={false}>Checking for new models...</LogMessage>
+            }
+
+            {!checking && status?.list?.error
+                && <LogMessage theme="warn">
+                    Could not check for new models ({status.list.error}). Showing the models seen last time.
+                </LogMessage>
+            }
+
+            {!model && coach.model != "custom"
+                && <LogMessage theme="warn">
+                    The selected model is no longer in the model list. Pick another one.
+                </LogMessage>
+            }
 
             <div className={styles.setting}>
                 <span>Explain</span>
@@ -199,6 +244,13 @@ function CoachOptions() {
                 </div>
             }
 
+            {model?.retrying
+                && <LogMessage theme="info" includeIcon={false}>
+                    Connection lost, reconnecting automatically (attempt {model.attempt}). The download
+                    carries on from where it stopped.
+                </LogMessage>
+            }
+
             {model?.downloading
                 && <div className={styles.setting}>
                     <span>Downloading... {Math.round(model.progress * 100)}%</span>
@@ -209,7 +261,7 @@ function CoachOptions() {
                 </div>
             }
 
-            {model?.error
+            {model?.error && !model.retrying
                 && <LogMessage theme="error">
                     Could not download the coach: {model.error}. Check your internet connection and try again.
                 </LogMessage>

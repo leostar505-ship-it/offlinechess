@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - Release
+    paths-ignore:
+      - models.json
 
 permissions:
   contents: write

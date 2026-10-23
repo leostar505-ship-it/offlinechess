@@ -1,0 +1,34 @@
+name: Publish models list
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - Release
+    paths:
+      - models.json
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the list is valid JSON
+        run: node -e "const l=JSON.parse(require('fs').readFileSync('models.json','utf8')); if(!Array.isArray(l.models)) process.exit(1)"
+
+      - name: Publish models list
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: models-list
+          name: models-list
+          prerelease: false
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            The list of AI coach models the app shows in its model dropdown. The app checks this every time you open that dropdown. You do not need this.
+          files: |
+            models.json

@@ -4,6 +4,7 @@ let LlamaChatSession = null;
 let QwenChatWrapper = null;
 let loading = null;
 let thinkingModel = false;
+let canThink = false;
 
 const THOUGHT_TOKENS = 400;
 
@@ -29,12 +30,17 @@ async function load(message) {
             && template.includes("<think>")
             && template.includes("<|im_start|>");
 
+        canThink = thinkingModel && (
+            template.includes("enable_thinking")
+            || /thinking/i.test(String(message.label || ""))
+        );
+
         context = await model.createContext({
             contextSize: 2048,
             threads: message.threads
         });
 
-        reply({ type: "ready", id: message.id, thinking: thinkingModel });
+        reply({ type: "ready", id: message.id, thinking: canThink });
     } catch (error) {
         reply({ type: "error", id: message.id, error: String(error && error.message || error) });
     }

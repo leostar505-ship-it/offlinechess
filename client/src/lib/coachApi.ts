@@ -1,15 +1,18 @@
-export type CoachModelKey = "compact" | "small" | "large" | "huge" | "custom";
+export type CoachModelKey = string;
 export type CoachCoverage = "key" | "all" | "current";
 
 export interface CoachModelStatus {
     label: string;
     warning: string | null;
     custom: boolean;
+    remote: boolean;
     loadError: string | null;
     thinking: boolean;
     sizeBytes: number;
     installed: boolean;
     downloading: boolean;
+    retrying: boolean;
+    attempt: number;
     progress: number;
     error: string | null;
     active: boolean;
@@ -21,6 +24,7 @@ export interface CoachModelStatus {
 
 export interface CoachStatus {
     models: Record<CoachModelKey, CoachModelStatus>;
+    list?: { error: string | null; checkedAt: number | null; url: string };
 }
 
 const json = { "Content-Type": "application/json" };
@@ -47,6 +51,10 @@ async function post(path: string): Promise<CoachStatus | null> {
     } catch {
         return null;
     }
+}
+
+export function refreshCoachList() {
+    return post("/api/coach/list/refresh");
 }
 
 export function startCoachDownload(model: CoachModelKey) {

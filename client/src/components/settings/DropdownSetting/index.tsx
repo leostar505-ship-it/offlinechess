@@ -57,6 +57,7 @@ function DropdownSetting<Option extends BaseDropdownOption>(
         getOptionLabel={getLabel}
         defaultValue={props.defaultValue}
         onChange={value => props.onSelect?.(value ?? undefined)}
+        onMenuOpen={props.onOpen}
         isSearchable={props.searchable || false}
         styles={{
             control: baseStyles => ({

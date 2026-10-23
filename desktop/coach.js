@@ -7,6 +7,11 @@ const { fork } = require("child_process");
 
 const HF = "https://huggingface.co/";
 
+const LIST_URL = "https://github.com/leostar505-ship-it/offlinechess/releases/download/models-list/models.json";
+const LIST_LIMIT = 65536;
+const LIST_MAX_MODELS = 30;
+const REMOTE_WARNING = "This model comes from the online model list and has not been tested with OfflineChess, so it may fail to load or give poor answers.";
+
 const CUSTOM_WARNING = "Your own model must be a GGUF file that works with the host this app uses (llama.cpp through node-llama-cpp). Newer or unusual model types may fail to load, bigger models need more RAM, and the comments are only as good as the model you pick.";
 
 const MODELS = {
@@ -57,23 +62,54 @@ const RUNTIME_OVERHEAD = 0.75 * 1024 ** 3;
 
 const allowedHosts = [
     /^huggingface\.co$/,
-    /(^|\.)hf\.co$/
+    /(^|\.)hf\.co$/,
+    /^github\.com$/,
+    /(^|\.)githubusercontent\.com$/
 ];
 
+for (const model of Object.values(MODELS)) {
+    if (model.repo) model.url = HF + model.repo + "/resolve/main/" + model.name;
+}
+
+const remote = {};
 const states = {};
 const loadErrors = {};
+let listState = { error: null, checkedAt: null, checking: false };
+let cacheLoaded = false;
 const thinkingSupport = { compact: true, huge: true, small: false, large: false, custom: false };
 
+function newState() {
+    return { downloading: false, received: 0, total: 0, error: null, abort: null, retrying: false, attempt: 0 };
+}
+
 for (const key of Object.keys(MODELS)) {
-    states[key] = { downloading: false, received: 0, error: null, abort: null };
+    states[key] = newState();
+}
+
+function has(object, key) {
+    return Object.prototype.hasOwnProperty.call(object, key);
 }
 
 function isModelKey(key) {
-    return Object.prototype.hasOwnProperty.call(MODELS, key);
+    return has(MODELS, key) || has(remote, key);
+}
+
+function modelOf(key) {
+    return MODELS[key] || remote[key];
+}
+
+function stateOf(key) {
+    if (!states[key]) states[key] = newState();
+
+    return states[key];
+}
+
+function isRemote(key) {
+    return has(remote, key);
 }
 
 function modelPath(key, dir) {
-    return path.join(dir, MODELS[key].name);
+    return path.join(dir, modelOf(key).name);
 }
 
 function customInfoPath(dir) {
@@ -81,7 +117,9 @@ function customInfoPath(dir) {
 }
 
 function sizeOf(key, dir) {
-    if (key !== "custom") return MODELS[key].size;
+    if (key !== "custom" && !isRemote(key)) return MODELS[key].size;
+
+    if (isRemote(key) && !isInstalled(key, dir)) return remote[key].size;
 
     try {
         return fs.statSync(modelPath(key, dir)).size;
@@ -94,14 +132,14 @@ function isInstalled(key, dir) {
     try {
         const size = fs.statSync(modelPath(key, dir)).size;
 
-        return key === "custom" ? size > 0 : size === MODELS[key].size;
+        return key === "custom" || isRemote(key) ? size > 0 : size === MODELS[key].size;
     } catch {
         return false;
     }
 }
 
 function labelOf(key, dir) {
-    if (key !== "custom") return MODELS[key].label;
+    if (key !== "custom") return modelOf(key).label;
 
     try {
         const info = JSON.parse(fs.readFileSync(customInfoPath(dir), "utf8"));
@@ -125,7 +163,7 @@ function memoryInfo(key, dir) {
     };
 }
 
-function fetchTo(url, dest, startAt, onBytes, hash, signal, redirects = 0) {
+function fetchTo(url, dest, startAt, onBytes, hash, signal, onTotal, redirects = 0) {
     return new Promise((resolve, reject) => {
         if (redirects > 6) return reject(new Error("Too many redirects"));
 
@@ -153,8 +191,13 @@ function fetchTo(url, dest, startAt, onBytes, hash, signal, redirects = 0) {
 
                 return resolve(fetchTo(
                     new URL(response.headers.location, url).toString(),
-                    dest, startAt, onBytes, hash, signal, redirects + 1
+                    dest, startAt, onBytes, hash, signal, onTotal, redirects + 1
                 ));
+            }
+
+            if (response.statusCode === 416) {
+                response.resume();
+                return reject(Object.assign(new Error("Server ignored resume"), { restart: true }));
             }
 
             const resumed = response.statusCode === 206;
@@ -167,6 +210,11 @@ function fetchTo(url, dest, startAt, onBytes, hash, signal, redirects = 0) {
             if (!resumed && startAt > 0) {
                 return reject(Object.assign(new Error("Server ignored resume"), { restart: true }));
             }
+
+            const rangeTotal = Number(/\/(\d+)$/.exec(String(response.headers["content-range"] || ""))?.[1]);
+            const total = resumed ? rangeTotal : Number(response.headers["content-length"]);
+
+            if (total > 0) onTotal(total);
 
             const out = fs.createWriteStream(dest, { flags: resumed ? "a" : "w" });
 
@@ -209,9 +257,10 @@ function hashFile(file) {
 async function runDownload(key, dir, signal) {
     fs.mkdirSync(dir, { recursive: true });
 
-    const model = MODELS[key];
-    const state = states[key];
+    const model = modelOf(key);
+    const state = stateOf(key);
     const partPath = modelPath(key, dir) + ".part";
+    const exact = !isRemote(key) && key !== "custom";
 
     let existing = 0;
 
@@ -220,7 +269,7 @@ async function runDownload(key, dir, signal) {
     } catch {
     }
 
-    if (existing >= model.size) {
+    if (exact && existing >= model.size) {
         fs.rmSync(partPath, { force: true });
         existing = 0;
     }
@@ -228,11 +277,16 @@ async function runDownload(key, dir, signal) {
     let hash = existing > 0 ? await hashFile(partPath) : crypto.createHash("sha256");
 
     state.received = existing;
+    state.total = exact ? model.size : 0;
+
+    const onTotal = total => {
+        state.total = total;
+    };
 
     try {
-        await fetchTo(HF + model.repo + "/resolve/main/" + model.name, partPath, existing, bytes => {
+        await fetchTo(model.url, partPath, existing, bytes => {
             state.received += bytes;
-        }, hash, signal);
+        }, hash, signal, onTotal);
     } catch (error) {
         if (!error.restart) throw error;
 
@@ -240,31 +294,92 @@ async function runDownload(key, dir, signal) {
         hash = crypto.createHash("sha256");
         state.received = 0;
 
-        await fetchTo(HF + model.repo + "/resolve/main/" + model.name, partPath, 0, bytes => {
+        await fetchTo(model.url, partPath, 0, bytes => {
             state.received += bytes;
-        }, hash, signal);
+        }, hash, signal, onTotal);
     }
 
-    if (hash.digest("hex") !== model.sha256) {
+    if (model.sha256 && hash.digest("hex") !== model.sha256) {
         fs.rmSync(partPath, { force: true });
         throw new Error("Downloaded file failed its integrity check");
+    }
+
+    if (fs.statSync(partPath).size === 0) {
+        fs.rmSync(partPath, { force: true });
+        throw new Error("The download was empty");
     }
 
     fs.renameSync(partPath, modelPath(key, dir));
 }
 
-function start(key, dir) {
-    const state = states[key];
+function isRetryable(error) {
+    const message = String(error && error.message || "");
 
-    if (key === "custom" || state.downloading || isInstalled(key, dir)) return;
+    if (/Blocked download host|integrity check|too many redirects/i.test(message)) return false;
+
+    const http = /HTTP (\d+)/.exec(message);
+
+    if (http) {
+        const code = Number(http[1]);
+
+        return code >= 500 || code === 408 || code === 429;
+    }
+
+    return true;
+}
+
+function pause(ms, signal) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, ms);
+
+        signal.addEventListener("abort", () => {
+            clearTimeout(timer);
+            reject(Object.assign(new Error("Cancelled"), { cancelled: true }));
+        }, { once: true });
+    });
+}
+
+async function downloadWithRetry(key, dir, signal, run = runDownload, wait = pause) {
+    const state = stateOf(key);
+    let attempt = 0;
+
+    for (;;) {
+        try {
+            await run(key, dir, signal);
+
+            state.retrying = false;
+            state.attempt = 0;
+            state.error = null;
+
+            return;
+        } catch (error) {
+            if (error.cancelled || signal.aborted || !isRetryable(error)) throw error;
+
+            attempt++;
+
+            state.retrying = true;
+            state.attempt = attempt;
+            state.error = error.message || "Connection lost";
+
+            await wait(Math.min(30000, 2000 * attempt), signal);
+        }
+    }
+}
+
+function start(key, dir) {
+    const state = stateOf(key);
+
+    if (key === "custom" || !isModelKey(key) || state.downloading || isInstalled(key, dir)) return;
 
     const controller = new AbortController();
 
     state.downloading = true;
     state.error = null;
+    state.retrying = false;
+    state.attempt = 0;
     state.abort = controller;
 
-    runDownload(key, dir, controller.signal)
+    downloadWithRetry(key, dir, controller.signal)
         .catch(error => {
             state.error = error.cancelled || controller.signal.aborted
                 ? null
@@ -272,12 +387,13 @@ function start(key, dir) {
         })
         .finally(() => {
             state.downloading = false;
+            state.retrying = false;
             state.abort = null;
         });
 }
 
 function cancel(key) {
-    states[key].abort?.abort();
+    stateOf(key).abort?.abort();
 }
 
 function remove(key, dir) {
@@ -291,15 +407,171 @@ function remove(key, dir) {
     if (key === "custom") fs.rmSync(customInfoPath(dir), { force: true });
 
     loadErrors[key] = null;
-    states[key].received = 0;
-    states[key].error = null;
+    stateOf(key).received = 0;
+    stateOf(key).error = null;
+}
+
+function listCachePath(dir) {
+    return path.join(dir, "list-cache.json");
+}
+
+function sizeFromName(name) {
+    const match = /\((\d+(?:\.\d+)?)\s*G(?:B)?\)/i.exec(name);
+
+    return match ? Math.round(Number(match[1]) * 1024 ** 3) : 0;
+}
+
+function validHost(url) {
+    try {
+        const parsed = new URL(url);
+
+        return parsed.protocol === "https:" && allowedHosts.some(pattern => pattern.test(parsed.hostname));
+    } catch {
+        return false;
+    }
+}
+
+function parseList(text) {
+    const parsed = JSON.parse(text);
+    const entries = Array.isArray(parsed) ? parsed : parsed && parsed.models;
+
+    if (!Array.isArray(entries)) throw new Error("The model list is not in the expected format");
+
+    const result = [];
+
+    for (const entry of entries.slice(0, LIST_MAX_MODELS)) {
+        if (!entry || typeof entry.name !== "string" || typeof entry.url !== "string") continue;
+
+        const name = entry.name.trim().slice(0, 80);
+
+        if (!name || !validHost(entry.url)) continue;
+
+        result.push({ name, url: entry.url });
+    }
+
+    return result;
+}
+
+function keyForUrl(url) {
+    return "list-" + crypto.createHash("sha1").update(url).digest("hex").slice(0, 12);
+}
+
+function applyList(entries, dir) {
+    const builtinByUrl = {};
+
+    for (const [key, model] of Object.entries(MODELS)) {
+        if (model.url) builtinByUrl[model.url] = key;
+    }
+
+    const next = {};
+
+    for (const entry of entries) {
+        const builtin = builtinByUrl[entry.url];
+
+        if (builtin) {
+            MODELS[builtin].label = entry.name;
+            continue;
+        }
+
+        next[keyForUrl(entry.url)] = {
+            label: entry.name,
+            url: entry.url,
+            name: keyForUrl(entry.url) + ".gguf",
+            size: sizeFromName(entry.name),
+            sha256: null,
+            warning: REMOTE_WARNING,
+            remote: true
+        };
+    }
+
+    for (const key of Object.keys(remote)) {
+        if (!next[key] && !isInstalled(key, dir) && !stateOf(key).downloading) delete remote[key];
+    }
+
+    for (const [key, model] of Object.entries(next)) {
+        remote[key] = model;
+        stateOf(key);
+    }
+}
+
+function loadListCache(dir) {
+    if (cacheLoaded) return;
+
+    cacheLoaded = true;
+
+    try {
+        applyList(parseList(fs.readFileSync(listCachePath(dir), "utf8")), dir);
+    } catch {
+    }
+}
+
+function fetchText(url, redirects = 0) {
+    return new Promise((resolve, reject) => {
+        if (redirects > 5) return reject(new Error("Too many redirects"));
+
+        if (!validHost(url)) return reject(new Error("Blocked list host"));
+
+        const request = https.get(url, { headers: { "User-Agent": "OfflineChess" } }, response => {
+            if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
+                response.resume();
+
+                return resolve(fetchText(new URL(response.headers.location, url).toString(), redirects + 1));
+            }
+
+            if (response.statusCode !== 200) {
+                response.resume();
+
+                return reject(new Error("The model list returned HTTP " + response.statusCode));
+            }
+
+            const chunks = [];
+            let size = 0;
+
+            response.on("data", chunk => {
+                size += chunk.length;
+
+                if (size > LIST_LIMIT) return request.destroy(new Error("The model list is too large"));
+
+                chunks.push(chunk);
+            });
+
+            response.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+            response.on("error", reject);
+        });
+
+        request.on("error", reject);
+        request.setTimeout(8000, () => request.destroy(new Error("Checking for new models timed out")));
+    });
+}
+
+async function refreshList(dir, fetcher = fetchText) {
+    loadListCache(dir);
+
+    listState = { ...listState, checking: true };
+
+    try {
+        const text = await fetcher(LIST_URL);
+        const entries = parseList(text);
+
+        applyList(entries, dir);
+
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(listCachePath(dir), JSON.stringify({ models: entries }));
+
+        listState = { error: null, checkedAt: Date.now(), checking: false };
+    } catch (error) {
+        listState = { error: error.message || "Could not check for new models", checkedAt: listState.checkedAt, checking: false };
+    }
 }
 
 function getStatus(dir) {
-    const status = { models: {} };
+    loadListCache(dir);
 
-    for (const key of Object.keys(MODELS)) {
-        const state = states[key];
+    const status = { models: {}, list: { error: listState.error, checkedAt: listState.checkedAt, url: LIST_URL } };
+
+    for (const key of [...Object.keys(MODELS), ...Object.keys(remote)]) {
+        const model = modelOf(key);
+        const state = stateOf(key);
         const installed = isInstalled(key, dir);
         let partial = 0;
 
@@ -311,17 +583,21 @@ function getStatus(dir) {
         }
 
         const received = state.downloading ? state.received : partial;
+        const total = state.total || model.size;
 
         status.models[key] = {
             label: labelOf(key, dir),
-            warning: MODELS[key].warning,
+            warning: model.warning,
             custom: key === "custom",
+            remote: isRemote(key),
             thinking: !!thinkingSupport[key],
             loadError: installed ? loadErrors[key] || null : null,
-            sizeBytes: installed ? sizeOf(key, dir) : MODELS[key].size,
+            sizeBytes: installed ? sizeOf(key, dir) : model.size,
             installed,
             downloading: state.downloading,
-            progress: installed ? 1 : Math.min(1, received / Math.max(1, MODELS[key].size)),
+            retrying: state.downloading && state.retrying,
+            attempt: state.attempt,
+            progress: installed ? 1 : Math.min(1, received / Math.max(1, total)),
             error: installed ? null : state.error,
             active: installed && activeKey === key,
             ...memoryInfo(key, dir)
@@ -399,7 +675,7 @@ function startWorker(key, dir) {
 
         pending.delete(message.id);
 
-        if (message.type === "ready" && message.id === 0 && activeKey === key && key === "custom") {
+        if (message.type === "ready" && message.id === 0 && activeKey === key && (key === "custom" || isRemote(key))) {
             thinkingSupport[key] = !!message.thinking;
         }
 
@@ -423,6 +699,7 @@ function startWorker(key, dir) {
         type: "load",
         id: 0,
         modelPath: modelPath(key, dir),
+        label: labelOf(key, dir),
         threads: Math.max(2, Math.min(8, os.cpus().length - 1))
     });
 
@@ -534,6 +811,10 @@ module.exports = {
     cancel,
     remove,
     getStatus,
+    refreshList,
+    downloadWithRetry,
+    parseList,
+    sizeFromName,
     generate,
     stopWorker,
     isModelKey

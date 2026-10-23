@@ -136,7 +136,13 @@ async function handleCoachRequest(req, res) {
         return res.end();
     }
 
-    const action = /^\/api\/coach\/([a-z]+)\/(download|cancel|remove)$/.exec(url);
+    if (url === "/api/coach/list/refresh") {
+        await coach.refreshList(userCoachDir());
+
+        return sendJson(res, 200, coach.getStatus(userCoachDir()));
+    }
+
+    const action = /^\/api\/coach\/([a-z0-9-]+)\/(download|cancel|remove)$/.exec(url);
 
     if (action && coach.isModelKey(action[1])) {
         if (action[2] === "download") coach.start(action[1], userCoachDir());

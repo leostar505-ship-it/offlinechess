@@ -10,6 +10,7 @@ interface DropdownSettingProps<Option extends BaseDropdownOption> {
     options: Option[];
     defaultValue?: Option;
     onSelect?: (value?: Option) => void;
+    onOpen?: () => void;
     searchable?: boolean;
 
     dropdownStyle?: CSSProperties & WidthConstraint;

@@ -1,0 +1,20 @@
+{
+    "models": [
+        {
+            "name": "Compact (1.8G)",
+            "url": "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf"
+        },
+        {
+            "name": "Standard (2.5G)",
+            "url": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+        },
+        {
+            "name": "High quality (4G)",
+            "url": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q8_0.gguf"
+        },
+        {
+            "name": "Absurd (9G)",
+            "url": "https://huggingface.co/unsloth/Qwen3-14B-GGUF/resolve/main/Qwen3-14B-Q4_K_M.gguf"
+        }
+    ]
+}

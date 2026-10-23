@@ -49,6 +49,12 @@ function PrivacyNotice() {
             connects to the internet to pull selected games based off of your choosing.
         </p>
 
+        <p className={styles.body}>
+            Opening the AI coach model list also connects to GitHub (github.com/leostar505-ship-it/offlinechess)
+            to check whether the list of available models has changed, and downloading a model connects to
+            the site hosting it, such as Hugging Face. Nothing about your games is sent.
+        </p>
+
         <label className={styles.remember}>
             <input
                 type="checkbox"
