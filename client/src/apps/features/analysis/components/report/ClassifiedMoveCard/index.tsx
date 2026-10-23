@@ -81,6 +81,7 @@ function ClassifiedMoveCard() {
     const coachSettings = settings.analysis.coach;
     const coachComment = useCoachStore(state => state.comments[node.id]);
     const coachPending = useCoachStore(state => !!state.pending[node.id]);
+    const coachFailure = useCoachStore(state => state.failures[node.id]);
     const [coachReady, setCoachReady] = useState(false);
 
     useEffect(() => {
@@ -101,8 +102,10 @@ function ClassifiedMoveCard() {
         && !coachPending
     );
 
+    const coachAutoAllowed = coachCanComment && !coachFailure;
+
     useEffect(() => {
-        if (!coachCanComment || coachSettings.coverage != "current") return;
+        if (!coachAutoAllowed || coachSettings.coverage != "current") return;
 
         const timer = setTimeout(
             () => requestMoveComment(node, coachSettings.model, 2),
@@ -110,7 +113,7 @@ function ClassifiedMoveCard() {
         );
 
         return () => clearTimeout(timer);
-    }, [node, coachCanComment, coachSettings.coverage, coachSettings.model]);
+    }, [node, coachAutoAllowed, coachSettings.coverage, coachSettings.model]);
 
     const nearestOpeningName = findNodeRecursively(
         node,
@@ -209,13 +212,18 @@ function ClassifiedMoveCard() {
             }
 
             {coachCanComment
-                && coachSettings.coverage != "current"
+                && (coachSettings.coverage != "current" || !!coachFailure)
                 && <span
-                    className={styles.coachAsk}
+                    className={coachFailure ? styles.coachAskFailed : styles.coachAsk}
                     onClick={() => requestMoveComment(node, coachSettings.model, 2)}
                 >
-                    Ask the coach about this move
+                    {coachFailure ? "Ask the coach again" : "Ask the coach about this move"}
                 </span>
+            }
+
+            {coachCanComment
+                && coachFailure
+                && <span className={styles.coachFailure}>{coachFailure}</span>
             }
 
             {topAlternativeMove

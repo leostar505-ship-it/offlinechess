@@ -108,8 +108,10 @@ export async function generateCoachText(
         const body = await response.json();
 
         return typeof body.text == "string" ? body.text : null;
-    } catch {
-        return null;
+    } catch (error) {
+        if (signal?.aborted) return null;
+
+        throw error;
     }
 }
 

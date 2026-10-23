@@ -9,7 +9,8 @@ import {
     selectMoveNodes,
     cleanCoachText,
     coachTextIsGrounded,
-    coachTextIsSane
+    coachTextIsSane,
+    coachTextProblem
 } from "./coachPrompt";
 
 interface Job {
@@ -79,6 +80,24 @@ function setPending(id: string, pending: boolean) {
     store.patch({ pending: next });
 }
 
+const FAILURE_MESSAGES = {
+    squares: "The coach mentioned squares or moves that are not on the board, so its answer was thrown away.",
+    repeat: "The coach just repeated what is already on the board, so its answer was thrown away.",
+    short: "The coach's answer was too short to be useful, so it was thrown away.",
+    empty: "The model failed to answer.",
+    unknown: "Unknown error."
+};
+
+function setFailure(id: string, reason?: keyof typeof FAILURE_MESSAGES) {
+    const store = useCoachStore.getState();
+    const next = { ...store.failures };
+
+    if (reason) next[id] = FAILURE_MESSAGES[reason];
+    else delete next[id];
+
+    store.patch({ failures: next });
+}
+
 export function requestMoveComment(
     node: StateTreeNode,
     model: CoachModelKey,
@@ -94,6 +113,7 @@ export function requestMoveComment(
     const myEpoch = epoch;
 
     setPending(node.id, true);
+    setFailure(node.id);
 
     enqueue({
         key: "move:" + node.id,
@@ -109,14 +129,26 @@ export function requestMoveComment(
                 const cleaned = text ? cleanCoachText(text) : "";
                 const current = useCoachStore.getState();
 
-                if (cleaned && coachTextIsSane(cleaned) && coachTextIsGrounded(cleaned, prompt)) {
-                    current.patch({
-                        comments: { ...current.comments, [node.id]: cleaned },
-                        done: current.done + 1
-                    });
-                } else {
+                if (!cleaned) {
+                    setFailure(node.id, "empty");
                     current.patch({ done: current.done + 1 });
+                    return;
                 }
+
+                const problem = coachTextProblem(cleaned, prompt);
+
+                if (problem) {
+                    setFailure(node.id, problem);
+                    current.patch({ done: current.done + 1 });
+                    return;
+                }
+
+                current.patch({
+                    comments: { ...current.comments, [node.id]: cleaned },
+                    done: current.done + 1
+                });
+            } catch {
+                if (myEpoch == epoch) setFailure(node.id, "unknown");
             } finally {
                 if (myEpoch == epoch) setPending(node.id, false);
             }

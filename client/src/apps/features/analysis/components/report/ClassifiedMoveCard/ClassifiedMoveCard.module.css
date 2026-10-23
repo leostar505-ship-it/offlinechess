@@ -53,6 +53,22 @@
     text-decoration: underline;
 }
 
+.coachAskFailed {
+    width: fit-content;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #ff5252;
+}
+
+.coachAskFailed:hover {
+    text-decoration: underline;
+}
+
+.coachFailure {
+    font-size: 0.85rem;
+    color: #ff8a8a;
+}
+
 .bestAlternativeComment {
     display: flex;
     align-items: center;

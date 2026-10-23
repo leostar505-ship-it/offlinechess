@@ -227,6 +227,18 @@ export function coachTextIsGrounded(text: string, prompt: string) {
     return true;
 }
 
+export type CoachProblem = "short" | "repeat" | "squares";
+
+export function coachTextProblem(text: string, prompt: string): CoachProblem | null {
+    if (text.length < 20) return "short";
+
+    if (!coachTextIsSane(text)) return "repeat";
+
+    if (!coachTextIsGrounded(text, prompt)) return "squares";
+
+    return null;
+}
+
 export function coachTextIsSane(text: string) {
     if (text.length < 20) return false;
 

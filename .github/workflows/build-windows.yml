@@ -47,8 +47,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.4
-          name: Release v1.4
+          tag_name: v1.4.1
+          name: Release v1.4.1
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -61,6 +61,7 @@ jobs:
             - New suggestion arrows: Best Result (green, shows the key moves of a strong attack such as a sacrifice leading to mate) and Move Threats (orange, shows what the move you played now attacks)
             - New "All" suggestion arrows: shows the threats, the best alternative and the best line together, white moves in white and black moves in black
             - Privacy notice on every start: AI models and replies stay on your device, only the chess.com/lichess search goes online. Has a close button and a tick box to never show it again
+            - When the coach cannot answer, the Ask the coach button turns red and says why (wrong squares, repeating the board, too short, model failed, unknown error) and you can ask again
             - Clearer wording when a move throws away your advantage
             - Removed the three smallest AI sizes, they could not analyse, and weaker models no longer replace the normal explanation
 
