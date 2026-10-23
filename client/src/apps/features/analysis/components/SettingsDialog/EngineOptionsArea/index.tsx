@@ -91,6 +91,10 @@ function EngineOptionsArea() {
         {
             label: "Move Threats",
             value: EngineArrowType.MOVE_THREATS
+        },
+        {
+            label: "All",
+            value: EngineArrowType.ALL
         }
     ], [i18n.language]);
 
@@ -275,6 +279,9 @@ function EngineOptionsArea() {
                 checkmate or wins material, it draws the key moves of that line. Otherwise it shows the best move.
                 <br/><br/>
                 Move Threats: draws orange arrows from the piece that just moved to the enemy pieces it now attacks.
+                <br/><br/>
+                All: shows the threats, the best alternative and the best line together. White's moves are drawn
+                in white and Black's in black, including the best reply to a sacrifice.
             </Tooltip>
 
             <DropdownSetting

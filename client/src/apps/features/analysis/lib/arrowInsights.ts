@@ -70,20 +70,33 @@ export function getThreatArrows(fen: string, uci: string): ArrowPair[] {
 }
 
 const MAX_ARROWS = 4;
+const MAX_LINE_ARROWS = 6;
 
-export function getBestResultArrows(
+export interface ColouredArrow extends ArrowPair {
+    colour: Color;
+}
+
+export interface BestResult {
+    strong: boolean;
+    own: ArrowPair[];
+    line: ColouredArrow[];
+}
+
+export function analyseBestResult(
     fen: string,
     evaluation: Evaluation,
     moves: { uci: string }[]
-): ArrowPair[] {
-    if (moves.length == 0) return [];
+): BestResult {
+    const empty: BestResult = { strong: false, own: [], line: [] };
+
+    if (moves.length == 0) return empty;
 
     try {
         const board = new Chess(fen);
         const mover = board.turn();
         const start = materialFor(board, mover);
 
-        const own: ArrowPair[] = [];
+        const line: ColouredArrow[] = [];
         let lowest = 0;
         let balance = 0;
 
@@ -102,7 +115,7 @@ export function getBestResultArrows(
                 break;
             }
 
-            if (played.color == mover) own.push({ from: played.from, to: played.to });
+            line.push({ from: played.from, to: played.to, colour: played.color });
 
             balance = materialFor(board, mover) - start;
             lowest = Math.min(lowest, balance);
@@ -114,14 +127,64 @@ export function getBestResultArrows(
             && (evaluation.value > 0) == (mover == WHITE)
         );
 
-        const sacrificeThatPays = lowest <= -3 && balance - lowest >= 2;
+        const strong = matesForMover || (lowest <= -3 && balance - lowest >= 2);
 
-        if (!matesForMover && !sacrificeThatPays) return own.slice(0, 1);
+        const own = line.filter(arrow => arrow.colour == mover);
 
-        if (own.length <= MAX_ARROWS) return own;
+        if (!strong) {
+            return { strong, own: own.slice(0, 1), line: line.slice(0, 1) };
+        }
 
-        return [...own.slice(0, MAX_ARROWS - 1), own[own.length - 1]];
+        const pick = <T>(items: T[], limit: number) => (
+            items.length <= limit
+                ? items
+                : [...items.slice(0, limit - 1), items[items.length - 1]]
+        );
+
+        return {
+            strong,
+            own: pick(own, MAX_ARROWS),
+            line: pick(line, MAX_LINE_ARROWS)
+        };
+    } catch {
+        return empty;
+    }
+}
+
+export function getBestResultArrows(
+    fen: string,
+    evaluation: Evaluation,
+    moves: { uci: string }[]
+): ArrowPair[] {
+    return analyseBestResult(fen, evaluation, moves).own.map(
+        arrow => ({ from: arrow.from, to: arrow.to })
+    );
+}
+
+export function getColouredThreats(fen: string, uci: string): ColouredArrow[] {
+    try {
+        const moved = new Chess(fen).get(parseUciMove(uci).to);
+
+        if (!moved) return [];
+
+        return getThreatArrows(fen, uci).map(
+            arrow => ({ ...arrow, colour: moved.color })
+        );
     } catch {
         return [];
     }
+}
+
+export function dedupeArrows(arrows: ColouredArrow[]) {
+    const seen = new Set<string>();
+
+    return arrows.filter(arrow => {
+        const key = arrow.from + arrow.to;
+
+        if (seen.has(key)) return false;
+
+        seen.add(key);
+
+        return true;
+    });
 }

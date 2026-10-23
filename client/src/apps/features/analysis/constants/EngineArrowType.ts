@@ -3,7 +3,8 @@ enum EngineArrowType {
     TOP_CONTINUATION,
     TOP_ALTERNATIVE,
     BEST_RESULT,
-    MOVE_THREATS
+    MOVE_THREATS,
+    ALL
 }
 
 export default EngineArrowType;

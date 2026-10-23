@@ -8,11 +8,24 @@ import { classificationColours } from "@analysis/constants/classifications";
 import EngineArrowType from "@analysis/constants/EngineArrowType";
 import useSettingsStore from "@/stores/SettingsStore";
 import useAnalysisBoardStore from "@analysis/stores/AnalysisBoardStore";
-import { getThreatArrows, getBestResultArrows } from "@analysis/lib/arrowInsights";
+import {
+    getThreatArrows,
+    getBestResultArrows,
+    analyseBestResult,
+    getColouredThreats,
+    dedupeArrows
+} from "@analysis/lib/arrowInsights";
 import useRealtimeEngineStore from "@analysis/stores/RealtimeEngineStore";
 
 const arrowColour = classificationColours[Classification.BEST];
 const threatColour = "#f5a623cc";
+
+const sideColours = {
+    w: "rgba(255, 255, 255, 0.92)",
+    b: "rgba(15, 15, 15, 0.85)"
+};
+
+const MAX_ALL_ARROWS = 9;
 
 function useSuggestionArrows(): Arrow[] {
     const settings = useSettingsStore(state => state.settings.analysis);
@@ -64,6 +77,44 @@ function useSuggestionArrows(): Arrow[] {
             return getThreatArrows(node.state.fen, uci).map(
                 arrow => [arrow.from, arrow.to, threatColour]
             );
+        }
+
+        if (arrowsType == EngineArrowType.ALL) {
+            const collected = [];
+
+            const moveUci = node.state.move?.uci;
+
+            if (moveUci) {
+                collected.push(...getColouredThreats(node.state.fen, moveUci));
+            }
+
+            const previousTop = node.parent
+                ? getTopEngineLine(node.parent.state.engineLines)?.moves.at(0)?.uci
+                : undefined;
+
+            if (node.parent && previousTop) {
+                const squares = parseUciMove(previousTop);
+
+                collected.push({
+                    from: squares.from,
+                    to: squares.to,
+                    colour: node.parent.state.fen.split(" ")[1] == "b" ? "b" as const : "w" as const
+                });
+            }
+
+            const topLine = displayedEngineLines.at(0);
+
+            if (topLine) {
+                collected.push(...analyseBestResult(
+                    node.state.fen,
+                    topLine.evaluation,
+                    topLine.moves
+                ).line);
+            }
+
+            return dedupeArrows(collected)
+                .slice(0, MAX_ALL_ARROWS)
+                .map(arrow => [arrow.from, arrow.to, sideColours[arrow.colour]]);
         }
 
         return [];
