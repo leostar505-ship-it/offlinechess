@@ -4,6 +4,7 @@ import { getGameAccuracy } from "shared/lib/reporter/accuracy";
 import useAnalysisGameStore from "@analysis/stores/AnalysisGameStore";
 import useAnalysisBoardStore from "@analysis/stores/AnalysisBoardStore";
 import AccuraciesCard from "@analysis/components/report/AccuraciesCard";
+import CoachSummaryCard from "@analysis/components/report/CoachSummaryCard";
 import ClassificationCountCard from "@analysis/components/report/ClassificationCountCard";
 
 import EvaluationGraphArea from "./EvaluationGraphArea";
@@ -19,6 +20,8 @@ function GameReport() {
         <EvaluationGraphArea/>
 
         <AccuraciesCard accuracies={accuracies} />
+
+        <CoachSummaryCard/>
 
         <ClassificationCountCard analysisGame={analysisGame} />
     </>;

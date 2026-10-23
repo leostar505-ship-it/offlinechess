@@ -36,6 +36,23 @@
     color: rgba(255, 255, 255, 0.88);
 }
 
+.coachNote {
+    font-size: 0.9rem;
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.coachAsk {
+    width: fit-content;
+    font-size: 0.9rem;
+    cursor: pointer;
+    color: #7fb7ff;
+}
+
+.coachAsk:hover {
+    text-decoration: underline;
+}
+
 .bestAlternativeComment {
     display: flex;
     align-items: center;

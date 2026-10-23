@@ -1,0 +1,26 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+
+    border-radius: 10px;
+    background-color: var(--ui-shade-4);
+}
+
+.title {
+    font-size: 1.3rem;
+    color: white;
+}
+
+.body {
+    font-size: 1rem;
+    line-height: 1.4;
+
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.buttons {
+    display: flex;
+    gap: 8px;
+}

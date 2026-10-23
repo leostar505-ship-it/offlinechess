@@ -8,6 +8,7 @@ import useAnalysisGameStore from "@analysis/stores/AnalysisGameStore";
 import useAnalysisBoardStore from "@analysis/stores/AnalysisBoardStore";
 import useAnalysisProgressStore from "@analysis/stores/AnalysisProgressStore";
 import { analyseStateTree } from "@analysis/lib/reporter";
+import { runCoachForGame, resetCoach } from "@analysis/lib/coachRunner";
 
 function useAnalyseGame(
     onAnalysisError?: (message: string) => void
@@ -30,6 +31,8 @@ function useAnalyseGame(
     );
 
     return async () => {
+        resetCoach();
+
         const analyseResult = await analyseStateTree(analysisGame.stateTree, {
             includeBrilliant: settings.classifications.included.brilliant,
             includeCritical: settings.classifications.included.critical,
@@ -65,6 +68,10 @@ function useAnalyseGame(
         });
 
         setAnalysisStatus(AnalysisStatus.INACTIVE);
+
+        if (settings.coach.enabled) {
+            runCoachForGame(analyseResult.gameAnalysis.stateTree, settings.coach);
+        }
     };
 }
 

@@ -1,7 +1,7 @@
 {
     "name": "desktop",
     "productName": "OfflineChess",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "OfflineChess - WintrChess analysis as a local desktop app, no ads",
     "author": "leostar505 <leostar505-ship-it@users.noreply.github.com>",
     "license": "GPL-3.0-only",
@@ -34,10 +34,21 @@
         "files": [
             "main.js",
             "engine-download.js",
+            "coach.js",
+            "coach-worker.js",
             "setup/**/*",
             "package.json",
             "build/icon.png",
-            "app/**/*"
+            "app/**/*",
+            "!**/node_modules/@node-llama-cpp/*-cuda*/**",
+            "!**/node_modules/@node-llama-cpp/*-vulkan*/**",
+            "!**/node_modules/@node-llama-cpp/*-metal*/**",
+            "!**/node_modules/@node-llama-cpp/mac-*/**",
+            "!**/node_modules/@node-llama-cpp/linux-arm*/**",
+            "!**/node_modules/@node-llama-cpp/win-arm64*/**",
+            "!**/node_modules/node-llama-cpp/llama/localBuilds/**",
+            "!**/node_modules/node-llama-cpp/llama/llama.cpp/**",
+            "!**/node_modules/node-llama-cpp/llama/gpuInfo/**"
         ],
         "win": {
             "icon": "build/icon.ico",
@@ -83,10 +94,17 @@
             "synopsis": "Ad-free local chess game analysis",
             "maintainer": "leostar505 <leostar505-ship-it@users.noreply.github.com>",
             "artifactName": "OfflineChess-${version}.${ext}"
-        }
+        },
+        "asarUnpack": [
+            "coach-worker.js",
+            "node_modules/**/*"
+        ]
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/leostar505-ship-it/offlinechess.git"
+    },
+    "dependencies": {
+        "node-llama-cpp": "3.22.2"
     }
 }

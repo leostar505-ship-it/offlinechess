@@ -7,6 +7,7 @@ import useAnalysisGameStore from "@analysis/stores/AnalysisGameStore";
 import useAnalysisBoardStore from "@analysis/stores/AnalysisBoardStore";
 import useAnalysisTabStore from "@analysis/stores/AnalysisTabStore";
 import ClassifiedMoveCard from "@analysis/components/report/ClassifiedMoveCard";
+import CoachOffer from "@analysis/components/CoachOffer";
 import StateTreeTraverser from "@/components/chess/StateTreeTraverser";
 
 import TabBar from "./TabBar";
@@ -54,6 +55,8 @@ function AnalysisPanel({
             {gameAnalysisOpen && <TabBar/>}
 
             <AnalysisProgress/>
+
+            {!gameAnalysisOpen && <CoachOffer/>}
 
             {(gameAnalysisOpen && settings.engine.enabled)
                 && <RealtimeEngineArea/>

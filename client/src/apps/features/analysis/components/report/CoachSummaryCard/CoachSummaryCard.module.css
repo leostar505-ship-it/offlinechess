@@ -1,0 +1,24 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px;
+
+    border-radius: 10px;
+    background-color: var(--ui-shade-4);
+}
+
+.title {
+    text-align: center;
+
+    font-size: 1.4rem;
+    color: white;
+}
+
+.body {
+    white-space: pre-line;
+    font-size: 1rem;
+    line-height: 1.4;
+
+    color: rgba(255, 255, 255, 0.88);
+}

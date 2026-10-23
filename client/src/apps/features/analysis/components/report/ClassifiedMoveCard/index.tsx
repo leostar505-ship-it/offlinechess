@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import { Chess } from "chess.js";
@@ -23,6 +23,9 @@ import useAnalysisBoardStore from "@analysis/stores/AnalysisBoardStore";
 import useAnalysisProgressStore from "@analysis/stores/AnalysisProgressStore";
 import LogMessage from "@/components/common/LogMessage";
 import playBoardSound from "@/lib/boardSounds";
+import { getCoachStatus } from "@/lib/coachApi";
+import useCoachStore from "@analysis/stores/CoachStore";
+import { requestMoveComment } from "@analysis/lib/coachRunner";
 
 import * as styles from "./ClassifiedMoveCard.module.css";
 
@@ -74,6 +77,38 @@ function ClassifiedMoveCard() {
     );
 
     useEffect(() => setRealtimeClassifyError(), [node]);
+
+    const coachSettings = settings.analysis.coach;
+    const coachComment = useCoachStore(state => state.comments[node.id]);
+    const coachPending = useCoachStore(state => !!state.pending[node.id]);
+    const [coachReady, setCoachReady] = useState(false);
+
+    useEffect(() => {
+        if (!coachSettings.enabled) return setCoachReady(false);
+
+        getCoachStatus().then(status => (
+            setCoachReady(!!status?.models[coachSettings.model].installed)
+        ));
+    }, [coachSettings.enabled, coachSettings.model]);
+
+    const coachCanComment = (
+        coachReady
+        && !!node.parent
+        && !!node.state.classification
+        && !coachComment
+        && !coachPending
+    );
+
+    useEffect(() => {
+        if (!coachCanComment || coachSettings.coverage != "current") return;
+
+        const timer = setTimeout(
+            () => requestMoveComment(node, coachSettings.model, 2),
+            600
+        );
+
+        return () => clearTimeout(timer);
+    }, [node, coachCanComment, coachSettings.coverage, coachSettings.model]);
 
     const nearestOpeningName = findNodeRecursively(
         node,
@@ -151,9 +186,25 @@ function ClassifiedMoveCard() {
             }
 
             {node.state.classification
-                && node.state.explanation
+                && (coachComment || node.state.explanation)
                 && <span className={styles.explanation}>
-                    {node.state.explanation}
+                    {coachComment || node.state.explanation}
+                </span>
+            }
+
+            {coachPending
+                && <span className={styles.coachNote}>
+                    The coach is thinking...
+                </span>
+            }
+
+            {coachCanComment
+                && coachSettings.coverage != "current"
+                && <span
+                    className={styles.coachAsk}
+                    onClick={() => requestMoveComment(node, coachSettings.model, 2)}
+                >
+                    Ask the coach about this move
                 </span>
             }
 

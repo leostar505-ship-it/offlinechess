@@ -12,6 +12,8 @@ import DropdownSetting from "@/components/settings/DropdownSetting";
 import NumberSetting from "@/components/settings/NumberSetting";
 import SwitchSetting from "@/components/settings/SwitchSetting";
 
+import CoachOptions from "./CoachOptions";
+
 import * as styles from "../SettingsDialog.module.css";
 
 function EngineOptionsArea() {
@@ -141,6 +143,8 @@ function EngineOptionsArea() {
                 Could not download Stockfish 19. Check your internet connection and try again.
             </LogMessage>
         }
+
+        <CoachOptions/>
 
         <div className={styles.setting}>
             <span data-tooltip-id="settings-engine-depth">

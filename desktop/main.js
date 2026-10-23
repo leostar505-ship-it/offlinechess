@@ -3,6 +3,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const engineDownload = require("./engine-download");
+const coach = require("./coach");
 
 const PREFERRED_PORT = 38417;
 const HOST = "127.0.0.1";
@@ -85,6 +86,103 @@ const bundledEngines = {
     full: editionInfo.fullEngine !== false
 };
 
+function userCoachDir() {
+    return path.join(app.getPath("userData"), "coach");
+}
+
+function readJsonBody(req, limit = 65536) {
+    return new Promise((resolve, reject) => {
+        let size = 0;
+        const chunks = [];
+
+        req.on("data", chunk => {
+            size += chunk.length;
+
+            if (size > limit) {
+                reject(new Error("Request too large"));
+                req.destroy();
+                return;
+            }
+
+            chunks.push(chunk);
+        });
+
+        req.on("end", () => {
+            try {
+                resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+            } catch {
+                reject(new Error("Invalid request"));
+            }
+        });
+
+        req.on("error", reject);
+    });
+}
+
+async function handleCoachRequest(req, res) {
+    if (!isSameOriginRequest(req)) {
+        res.writeHead(403);
+        return res.end();
+    }
+
+    const url = req.url.split("?")[0];
+
+    if (url === "/api/coach/status" && req.method === "GET") {
+        return sendJson(res, 200, coach.getStatus(userCoachDir()));
+    }
+
+    if (req.method !== "POST") {
+        res.writeHead(405);
+        return res.end();
+    }
+
+    const action = /^\/api\/coach\/([a-z]+)\/(download|cancel|remove)$/.exec(url);
+
+    if (action && coach.isModelKey(action[1])) {
+        if (action[2] === "download") coach.start(action[1], userCoachDir());
+        else if (action[2] === "cancel") coach.cancel(action[1]);
+        else coach.remove(action[1], userCoachDir());
+
+        return sendJson(res, 200, coach.getStatus(userCoachDir()));
+    }
+
+    if (url === "/api/coach/generate") {
+        let body;
+
+        try {
+            body = await readJsonBody(req);
+        } catch (error) {
+            return sendJson(res, 400, { error: error.message });
+        }
+
+        if (!coach.isModelKey(body.model)) {
+            return sendJson(res, 400, { error: "Unknown model" });
+        }
+
+        const controller = new AbortController();
+        res.on("close", () => controller.abort());
+
+        try {
+            const text = await coach.generate(
+                body.model,
+                userCoachDir(),
+                body,
+                undefined,
+                controller.signal
+            );
+
+            return sendJson(res, 200, { text });
+        } catch (error) {
+            if (controller.signal.aborted) return;
+
+            return sendJson(res, 500, { error: error.message || "Coach failed" });
+        }
+    }
+
+    res.writeHead(404);
+    res.end();
+}
+
 function userEngineDir() {
     return path.join(app.getPath("userData"), "engines");
 }
@@ -156,6 +254,11 @@ function sendFile(res, filePath, isPage) {
 }
 
 function handleRequest(req, res) {
+    if (req.url.startsWith("/api/coach/")) {
+        handleCoachRequest(req, res);
+        return;
+    }
+
     const engineApi = /^\/api\/engine\/([a-z]+)$/.exec(req.url);
 
     if (engineApi && engineDownload.isEngineName(engineApi[1])) {
@@ -385,4 +488,5 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     app.on("window-all-closed", () => app.quit());
+    app.on("before-quit", () => coach.stopWorker());
 }

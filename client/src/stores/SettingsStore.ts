@@ -28,7 +28,12 @@ const settingsSchema = z.object({
                 theory: z.boolean()
             })
         }),
-        simpleNotation: z.boolean()
+        simpleNotation: z.boolean(),
+        coach: z.object({
+            enabled: z.boolean(),
+            model: z.enum(["tiny", "compact", "small", "large", "huge"]),
+            coverage: z.enum(["key", "all", "current"])
+        })
     }),
     themes: z.object({
         board: z.object({
@@ -62,7 +67,12 @@ export const defaultSettings: Settings = {
                 theory: true
             }
         },
-        simpleNotation: false
+        simpleNotation: false,
+        coach: {
+            enabled: false,
+            model: "small",
+            coverage: "key"
+        }
     },
     themes: {
         board: {
