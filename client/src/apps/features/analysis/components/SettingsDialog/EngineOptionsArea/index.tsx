@@ -190,6 +190,22 @@ function EngineOptionsArea() {
             />
         </div>
 
+        <LogMessage theme="info" includeIcon={false}>
+            Depth 20 is recommended for mostly accurate evaluation on casual hardware. If analysis is taking too long, go down to 18.
+        </LogMessage>
+
+        {settings.analysis.engine.depth < 18
+            && <LogMessage theme="warn">
+                Below depth 18 the evaluation may not be accurate, so accuracies and move ratings can be off.
+            </LogMessage>
+        }
+
+        {settings.analysis.engine.depth > 22
+            && <LogMessage theme="warn">
+                Above depth 22 you need a powerful CPU to get this level of analysis. On casual hardware it may take very long or never finish.
+            </LogMessage>
+        }
+
         <div className={styles.setting}>
             <span data-tooltip-id="settings-engine-lines">
                 {t("settings.engine.lines")}
