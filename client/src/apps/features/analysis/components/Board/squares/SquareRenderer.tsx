@@ -18,8 +18,13 @@ import {
     classificationImages
 } from "@analysis/constants/classifications";
 
+import { BoardOverlays } from "../overlays";
 import { SquaresContext } from "./SquaresContext";
 import * as styles from "./Square.module.css";
+
+function isTopRow(square: string, flipped?: boolean) {
+    return square.charAt(1) == (flipped ? "1" : "8");
+}
 
 function getSquareElements(children: ReactNode) {
     const squareElements = Children.toArray(children);
@@ -35,9 +40,16 @@ function getSquareElements(children: ReactNode) {
     return [ piece, ...notations ];
 }
 
+const overlayColours = {
+    danger: "rgba(235, 87, 66, 0.7)",
+    defended: "rgba(245, 166, 35, 0.7)",
+    promotion: "rgba(235, 87, 66, 0.7)"
+};
+
 function createSquareRenderer(
     node: StateTreeNode,
-    enableClassifications: boolean
+    enableClassifications: boolean,
+    overlays?: BoardOverlays
 ) {
     return forwardRef<HTMLDivElement, CustomSquareProps>((
         { children, style, square }, ref
@@ -69,6 +81,26 @@ function createSquareRenderer(
                     backgroundColor: highlightColour
                 }}/>
             }
+
+            {overlays?.highlights[square]
+                && <div className={styles.overlay} style={{
+                    backgroundColor: overlayColours[overlays.highlights[square]]
+                }}/>
+            }
+
+            {overlays?.tag?.square == square && <>
+                <span className={styles.tagStar}>★</span>
+
+                <span
+                    className={styles.tagLabel}
+                    style={isTopRow(square, overlays.flipped)
+                        ? { top: "100%" }
+                        : { bottom: "100%" }
+                    }
+                >
+                    {overlays.tag.label}
+                </span>
+            </>}
 
             {squares.playable.includes(square) && <div
                 className={styles.playableMoveCircle}

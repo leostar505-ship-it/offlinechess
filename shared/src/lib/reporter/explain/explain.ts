@@ -42,6 +42,7 @@ import {
     moveDrawbacks,
     forkTargets
 } from "./moveFindings";
+import { detectThemes } from "./themes";
 
 interface Context {
     node: StateTreeNode;
@@ -60,6 +61,7 @@ interface Context {
     playedOutcome: LineOutcome;
     bestOutcome: LineOutcome;
     playedGain: number;
+    onlyMove: boolean;
 }
 
 const tierNames = ["losing", "worse", "equal", "better", "winning"];
@@ -130,7 +132,23 @@ function buildFacts(ctx: Context): MoveFacts {
         ownPreviousTo: ctx.ownPreviousTo,
         bestMoveFrom: bestFromSquare(ctx),
         subjective: ctx.currSubj,
-        lineBoard: ctx.playedOutcome.board
+        lineBoard: ctx.playedOutcome.board,
+        onlyMove: ctx.onlyMove,
+        opponentReplies: ctx.current.state.engineLines
+            .map(line => {
+                const uci = line.moves.at(0)?.uci;
+
+                return uci
+                    ? {
+                        uci,
+                        subjective: getSubjectiveEvaluation(
+                            line.evaluation,
+                            ctx.moverColour
+                        )
+                    }
+                    : undefined;
+            })
+            .filter((reply): reply is NonNullable<typeof reply> => !!reply)
     };
 }
 
@@ -533,6 +551,8 @@ function explainMoveFor(
         return "This is a well-known move from opening theory.";
     }
 
+    node.state.themes = undefined;
+
     const parentState = node.parent?.state.move;
 
     const ownPreviousUci = options?.ownPreviousMoveUci
@@ -544,6 +564,20 @@ function explainMoveFor(
 
     const bestOutcome = evaluateLine(
         before.fen(), previous.topLine.moves, mover
+    );
+
+    const previousSubjective = getSubjectiveEvaluation(
+        previous.evaluation, moverColour
+    );
+
+    const secondSubjective = previous.secondSubjectiveEvaluation;
+
+    const onlyMove = (
+        (classification == Classification.BEST
+            || classification == Classification.EXCELLENT)
+        && !!secondSubjective
+        && previous.topMove.san == playedMove.san
+        && tierOf(previousSubjective) - tierOf(secondSubjective) >= 1
     );
 
     const ctx: Context = {
@@ -573,8 +607,16 @@ function explainMoveFor(
             materialBalance(after, mover)
             - materialBalance(before, mover)
             + playedOutcome.delta
-        )
+        ),
+        onlyMove
     };
+
+    node.state.themes = detectThemes(buildFacts(ctx)).map(theme => ({
+        id: theme.id,
+        label: theme.label,
+        square: theme.square,
+        highlights: theme.highlights
+    }));
 
     switch (classification) {
         case Classification.BRILLIANT:

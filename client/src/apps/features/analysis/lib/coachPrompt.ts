@@ -143,6 +143,10 @@ export function buildMovePrompt(node: StateTreeNode) {
         facts.push("The opponent's best reply is " + after.moves[0].san);
     }
 
+    if (node.state.themes && node.state.themes.length > 0) {
+        facts.push("Detected themes: " + node.state.themes.map(theme => theme.label).join(", "));
+    }
+
     if (node.state.explanation) {
         facts.push("Verified findings:\n" + nameTheMover(node.state.explanation, side));
     }

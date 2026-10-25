@@ -27,6 +27,19 @@ const sideColours = {
 
 const MAX_ALL_ARROWS = 9;
 
+const reviewColours = {
+    best: "rgba(152, 188, 73, 0.88)",
+    threat: "rgba(245, 166, 35, 0.88)",
+    punish: "rgba(235, 87, 66, 0.9)"
+};
+
+const punishedClassifications = [
+    Classification.INACCURACY,
+    Classification.MISTAKE,
+    Classification.BLUNDER,
+    Classification.RISKY
+];
+
 function useSuggestionArrows(): Arrow[] {
     const settings = useSettingsStore(state => state.settings.analysis);
 
@@ -117,9 +130,59 @@ function useSuggestionArrows(): Arrow[] {
                 .map(arrow => [arrow.from, arrow.to, sideColours[arrow.colour]]);
         }
 
+        if (arrowsType == EngineArrowType.REVIEW) {
+            const collected: Arrow[] = [];
+
+            const moveUci = node.state.move?.uci;
+
+            if (moveUci) {
+                getThreatArrows(node.state.fen, moveUci).forEach(arrow => {
+                    collected.push([arrow.from, arrow.to, reviewColours.threat]);
+                });
+            }
+
+            const previousTop = node.parent
+                ? getTopEngineLine(node.parent.state.engineLines)?.moves.at(0)?.uci
+                : undefined;
+
+            if (previousTop && previousTop != moveUci) {
+                const squares = parseUciMove(previousTop);
+
+                collected.push([squares.from, squares.to, reviewColours.best]);
+            }
+
+            const classification = node.state.classification;
+
+            if (classification && punishedClassifications.includes(classification)) {
+                const replyUci = (
+                    getTopEngineLine(node.state.engineLines)?.moves.at(0)?.uci
+                    ?? displayedEngineLines.at(0)?.moves.at(0)?.uci
+                );
+
+                if (replyUci) {
+                    const squares = parseUciMove(replyUci);
+
+                    collected.push([squares.from, squares.to, reviewColours.punish]);
+                }
+            }
+
+            const seen = new Set<string>();
+
+            return collected.filter(([from, to]) => {
+                const key = from + to;
+                if (seen.has(key)) return false;
+
+                seen.add(key);
+
+                return true;
+            });
+        }
+
         return [];
     }, [
+        node.id,
         node.state.fen,
+        node.state.classification,
         displayedEngineLines,
         settings.engine.suggestionArrows
     ]);

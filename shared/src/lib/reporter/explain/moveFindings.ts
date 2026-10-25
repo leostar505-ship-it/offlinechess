@@ -41,6 +41,7 @@ import {
     castlingRights,
     materialOf
 } from "./helpers";
+import { themeFindings } from "./themes";
 
 export interface MoveFacts {
     before: Chess;
@@ -53,6 +54,8 @@ export interface MoveFacts {
     bestMoveFrom?: Square;
     subjective?: Evaluation;
     lineBoard?: Chess;
+    onlyMove?: boolean;
+    opponentReplies?: { uci: string; subjective: Evaluation }[];
 }
 
 const CENTER_SQUARES: Square[] = ["d4", "e4", "d5", "e5"];
@@ -590,6 +593,8 @@ export function moveMerits(facts: MoveFacts): Finding[] {
             family: "structure"
         });
     }
+
+    findings.push(...themeFindings(facts));
 
     return findings.sort((a, b) => b.weight - a.weight);
 }

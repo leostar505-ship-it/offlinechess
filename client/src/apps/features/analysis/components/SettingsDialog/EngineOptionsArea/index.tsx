@@ -95,6 +95,10 @@ function EngineOptionsArea() {
         {
             label: "All",
             value: EngineArrowType.ALL
+        },
+        {
+            label: "Review",
+            value: EngineArrowType.REVIEW
         }
     ], [i18n.language]);
 
@@ -282,6 +286,9 @@ function EngineOptionsArea() {
                 <br/><br/>
                 All: shows the threats, the best alternative and the best line together. White's moves are drawn
                 in white and Black's in black, including the best reply to a sacrifice.
+                <br/><br/>
+                Review: green is the best move you could have played, orange is what the move you played now
+                attacks, and red is how the opponent can punish a mistake. Knight moves are drawn as an L.
             </Tooltip>
 
             <DropdownSetting

@@ -49,8 +49,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.6
-          name: Release v1.6
+          tag_name: v1.7
+          name: Release v1.7
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -73,6 +73,10 @@ jobs:
             - Ask the coach about a move: pick Explain (how the position stands and how the opponent can respond), Why this rating (a detailed answer), or type your own question
             - Clearer wording when a move throws away your advantage
             - Removed the three smallest AI sizes, they could not analyse, and weaker models no longer replace the normal explanation
+            - New "Review" suggestion arrows in the arrow setting, drawn like chess.com's game review: green is the best move you could have played, orange is what your move now attacks, and red is how the opponent can punish a mistake or blunder. Knight moves are drawn as an L. Every arrow mode now uses the new drawing
+            - Review also marks the board: red squares on the pieces your move attacks and on promotion squares, orange squares on pieces your move newly defends, and a tag naming the theme (for example Defends Pieces) on the square it is about
+            - New theme detector, no AI needed: it recognises defending pieces, the opposition, taking or blocking a promotion square, zugzwang and finding the only good move, and names them in the move explanation (White and Black wording). The AI coach also gets the detected themes, and stays optional
+            - The evaluation of the position now shows next to the move rating, with mate scores such as -M17
 
             OfflineChess.zip - installer, adds a desktop shortcut
             OfflineChess_Portable.zip - single exe, no install

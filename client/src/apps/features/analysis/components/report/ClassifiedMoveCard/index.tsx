@@ -9,7 +9,7 @@ import {
     findNodeRecursively
 } from "shared/types/game/position/StateTreeNode";
 import { Classification } from "shared/constants/Classification";
-import { getSimpleNotation } from "shared/lib/utils/chess";
+import { getSimpleNotation, stringifyEvaluation } from "shared/lib/utils/chess";
 import { getTopEngineLine } from "shared/types/game/position/EngineLine";
 import {
     classificationColours,
@@ -176,6 +176,9 @@ function ClassifiedMoveCard() {
 
     const topAlternativeMove = getTopAlternativeMove(node);
 
+    const shownEvaluation = getTopEngineLine(node.state.engineLines)?.evaluation;
+    const whiteAhead = !!shownEvaluation && shownEvaluation.value >= 0;
+
     function playTopAlternative() {
         if (!node.parent) return;
         if (!topAlternativeMove) return;
@@ -221,6 +224,19 @@ function ClassifiedMoveCard() {
                         )
                     }
                 </span>
+
+                {shownEvaluation
+                    && node.state.classification
+                    && <span
+                        className={styles.evalPill}
+                        style={whiteAhead
+                            ? { backgroundColor: "#f1f1f1", color: "#2b2b2b" }
+                            : { backgroundColor: "#454545", color: "white" }
+                        }
+                    >
+                        {stringifyEvaluation(shownEvaluation, shownEvaluation.value != 0)}
+                    </span>
+                }
             </div>
 
             {realtimeClassifyError

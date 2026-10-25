@@ -5,6 +5,7 @@ import { Move } from "chess.js";
 import { StateTreeNode } from "shared/types/game/position/StateTreeNode";
 import PlayerProfile from "shared/types/game/PlayerProfile";
 import Evaluation from "shared/types/game/position/Evaluation";
+import { BoardOverlays } from "./overlays";
 
 interface BoardProps {
     className?: string;
@@ -17,6 +18,7 @@ interface BoardProps {
     flipped?: boolean;
     evaluation?: Evaluation;
     arrows?: Arrow[];
+    overlays?: BoardOverlays;
     theme?: {
         lightSquareColour?: string;
         darkSquareColour?: string;

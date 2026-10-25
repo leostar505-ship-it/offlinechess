@@ -56,6 +56,7 @@ function useRealtimeAnalyser() {
         currentState.accuracy = analysedState.accuracy;
         currentState.opening = analysedState.opening;
         currentState.explanation = analysedState.explanation;
+        currentState.themes = analysedState.themes;
 
         if (!analysedState.classification)
             return cancelAnalyse("classifiedMoveCard.unknownError");

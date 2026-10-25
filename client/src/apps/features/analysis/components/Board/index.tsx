@@ -8,6 +8,7 @@ import { isMovePromotion } from "shared/lib/utils/chess";
 import useResizeObserver from "@/hooks/useResizeObserver";
 import PlayerProfile from "@/components/chess/PlayerProfile";
 import EvaluationBar from "../EvaluationBar";
+import ArrowOverlay from "./ArrowOverlay";
 
 import { useSquares } from "./squares/useSquares";
 import createSquareRenderer from "./squares/SquareRenderer";
@@ -35,14 +36,15 @@ function Board({
     flipped,
     evaluation,
     arrows,
+    overlays,
     enableClassifications = true,
     onAddMove
 }: BoardProps) {
     const squares = useSquares();
 
     const squareRenderer = useMemo(() => (
-        createSquareRenderer(node, enableClassifications)
-    ), [node, enableClassifications]);
+        createSquareRenderer(node, enableClassifications, overlays)
+    ), [node, enableClassifications, overlays]);
 
     const [ heldPromotion, setHeldPromotion ] = useState<ClickMove>();
 
@@ -130,39 +132,50 @@ function Board({
             />}
 
             <SquaresContext.Provider value={squares}>
-                <Chessboard
-                    position={node.state.fen}
-                    boardOrientation={flipped ? "black" : "white"}
-                    onSquareClick={onSquareClick}
-                    onSquareRightClick={squares.toggleHighlight}
-                    onPieceDragBegin={(piece, square) => {
-                        squares.setSelected(square);
-                        squares.loadPlayable(node.state.fen, square);
-                    }}
-                    onPieceDrop={(from, to, piece) => {
-                        squares.setSelected(undefined);
-                        squares.clearPlayable();
+                <div style={{
+                    position: "relative",
+                    flex: "none",
+                    width: boardWidth - (evaluation ? 40 : 0)
+                }}>
+                    <Chessboard
+                        position={node.state.fen}
+                        boardOrientation={flipped ? "black" : "white"}
+                        onSquareClick={onSquareClick}
+                        onSquareRightClick={squares.toggleHighlight}
+                        onPieceDragBegin={(piece, square) => {
+                            squares.setSelected(square);
+                            squares.loadPlayable(node.state.fen, square);
+                        }}
+                        onPieceDrop={(from, to, piece) => {
+                            squares.setSelected(undefined);
+                            squares.clearPlayable();
 
-                        return addMove(from, to, getPieceType(piece), true);
-                    }}
-                    onPromotionPieceSelect={onPromotionPieceSelect}
-                    customSquare={squareRenderer}
-                    customArrows={arrows}
-                    arePiecesDraggable={piecesDraggable}
-                    customLightSquareStyle={theme?.lightSquareColour
-                        ? { backgroundColor: theme.lightSquareColour }
-                        : undefined
-                    }
-                    customDarkSquareStyle={theme?.darkSquareColour
-                        ? { backgroundColor: theme.darkSquareColour }
-                        : undefined
-                    }
-                    animationDuration={165}
-                    showPromotionDialog={!!heldPromotion}
-                    promotionToSquare={heldPromotion?.to}
-                    promotionDialogVariant="vertical"
-                    boardWidth={boardWidth - (evaluation ? 40 : 0)}
-                />
+                            return addMove(from, to, getPieceType(piece), true);
+                        }}
+                        onPromotionPieceSelect={onPromotionPieceSelect}
+                        customSquare={squareRenderer}
+                        arePiecesDraggable={piecesDraggable}
+                        customLightSquareStyle={theme?.lightSquareColour
+                            ? { backgroundColor: theme.lightSquareColour }
+                            : undefined
+                        }
+                        customDarkSquareStyle={theme?.darkSquareColour
+                            ? { backgroundColor: theme.darkSquareColour }
+                            : undefined
+                        }
+                        animationDuration={165}
+                        showPromotionDialog={!!heldPromotion}
+                        promotionToSquare={heldPromotion?.to}
+                        promotionDialogVariant="vertical"
+                        boardWidth={boardWidth - (evaluation ? 40 : 0)}
+                    />
+
+                    <ArrowOverlay
+                        arrows={arrows || []}
+                        size={boardWidth - (evaluation ? 40 : 0)}
+                        flipped={flipped}
+                    />
+                </div>
             </SquaresContext.Provider>
         </div>
 

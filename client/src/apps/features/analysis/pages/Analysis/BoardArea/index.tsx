@@ -12,6 +12,7 @@ import playBoardSound from "@/lib/boardSounds";
 
 import useEvaluation from "./useEvaluation";
 import useSuggestionArrows from "./useSuggestionArrows";
+import useBoardOverlays from "./useBoardOverlays";
 import * as styles from "./BoardArea.module.css";
 
 function BoardArea() {
@@ -36,6 +37,7 @@ function BoardArea() {
 
     const evaluation = useEvaluation();
     const suggestionArrows = useSuggestionArrows();
+    const overlays = useBoardOverlays();
 
     function addMove(move: Move) {
         if (!gameAnalysisOpen) {
@@ -71,6 +73,7 @@ function BoardArea() {
         flipped={boardFlipped}
         evaluation={evaluation}
         arrows={suggestionArrows}
+        overlays={overlays}
         piecesDraggable={!autoplayEnabled}
         enableClassifications={!settings.classifications.hide}
         onAddMove={addMove}

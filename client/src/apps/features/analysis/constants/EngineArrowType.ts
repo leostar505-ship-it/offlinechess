@@ -4,7 +4,8 @@ enum EngineArrowType {
     TOP_ALTERNATIVE,
     BEST_RESULT,
     MOVE_THREATS,
-    ALL
+    ALL,
+    REVIEW
 }
 
 export default EngineArrowType;
