@@ -9,13 +9,13 @@ import {
     ReferenceLine,
     ReferenceDot
 } from "recharts";
-import { max } from "lodash-es";
 
 import { StateTreeNode } from "shared/types/game/position/StateTreeNode";
 import Evaluation from "shared/types/game/position/Evaluation";
 import { defaultEvaluation } from "shared/constants/utils";
 import PieceColour from "shared/constants/PieceColour";
 import { Classification } from "shared/constants/Classification";
+import { getExpectedPoints } from "shared/lib/reporter/expectedPoints";
 import { getTopEngineLine } from "shared/types/game/position/EngineLine";
 import { classificationColours } from "@analysis/constants/classifications";
 
@@ -32,25 +32,14 @@ const highlightedClassifications: Classification[] = [
     Classification.BLUNDER
 ];
 
-function getGraphY(
-    node: StateTreeNode,
-    evaluation: Evaluation,
-    graphHeight: number
-) {
-    if (evaluation.type == "mate") {
-        if (evaluation.value == 0) {
-            if (node.state.moveColour == undefined) {
-                return graphHeight / 2;
-            }
-
-            return node.state.moveColour == PieceColour.WHITE
-                ? graphHeight : 0;
-        }
-
-        return evaluation.value >= 0 ? graphHeight : 0;
+function getGraphY(node: StateTreeNode, evaluation: Evaluation) {
+    if (evaluation.type == "mate" && evaluation.value == 0) {
+        if (node.state.moveColour == undefined) return 0.5;
     }
 
-    return evaluation.value + (graphHeight / 2);
+    return getExpectedPoints(evaluation, {
+        moveColour: node.state.moveColour ?? PieceColour.WHITE
+    });
 }
 
 function EvaluationGraph({
@@ -60,26 +49,16 @@ function EvaluationGraph({
     selectedIndex,
     onPointClick
 }: EvaluationGraphProps) {
-    const absoluteHighestValue = max(
-        nodes.map(node => Math.abs(
-            getTopEngineLine(node.state.engineLines)?.evaluation.value || 0
-        ))
-    ) || 0;
-
-    const yAxisPadding = absoluteHighestValue * 0.2;
-
     const dataPoints = nodes.map((node, index) => {
         const evaluation = getTopEngineLine(node.state.engineLines)?.evaluation
             || defaultEvaluation;
-
-        const graphHeight = (absoluteHighestValue + yAxisPadding) * 2;
 
         return {
             nodeId: node.id,
             state: node.state,
             evaluation: evaluation,
             x: index,
-            y: getGraphY(node, evaluation, graphHeight)
+            y: getGraphY(node, evaluation)
         } as EvaluationGraphPoint;
     });
 
@@ -113,9 +92,7 @@ function EvaluationGraph({
                 }}
             >
                 <XAxis hide dataKey="x"/>
-                <YAxis hide domain={[
-                    0, absoluteHighestValue * 2 + (yAxisPadding * 2)
-                ]}/>
+                <YAxis hide domain={[0, 1]}/>
 
                 <Area
                     dataKey="y"
@@ -127,7 +104,7 @@ function EvaluationGraph({
                 />
 
                 <ReferenceLine
-                    y={absoluteHighestValue + yAxisPadding}
+                    y={0.5}
                     stroke="gray"
                     strokeOpacity={0.5}
                     strokeWidth={2}
@@ -153,7 +130,7 @@ function EvaluationGraph({
                     key={point.nodeId}
                     x={point.x}
                     y={point.y}
-                    r={3}
+                    r={4.5}
                     fill={classificationColours[point.state.classification!]}
                     strokeWidth={0}
                 />)}
