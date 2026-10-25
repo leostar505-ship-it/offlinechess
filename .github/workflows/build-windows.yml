@@ -49,8 +49,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.7.1
-          name: Release v1.7.1
+          tag_name: v1.7.2
+          name: Release v1.7.2
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -79,6 +79,7 @@ jobs:
             - The evaluation of the position now shows next to the move rating, with mate scores such as -M17
             - Hotfix: the evaluation graph now uses a win-chance scale like chess.com's, so one huge swing no longer flattens the rest of the line
             - Hotfix: game accuracy now punishes big mistakes and weights swingy stretches of the game more, so it lands much closer to chess.com's numbers instead of showing about 90 for everyone
+            - Hotfix: accuracy is now stricter on moves that throw away winning chances, bringing the numbers closer to chess.com's
 
             OfflineChess.zip - installer, adds a desktop shortcut
             OfflineChess_Portable.zip - single exe, no install

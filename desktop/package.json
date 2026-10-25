@@ -1,7 +1,7 @@
 {
     "name": "desktop",
     "productName": "OfflineChess",
-    "version": "1.7.1",
+    "version": "1.7.2",
     "description": "OfflineChess - WintrChess analysis as a local desktop app, no ads",
     "author": "leostar505 <leostar505-ship-it@users.noreply.github.com>",
     "license": "GPL-3.0-only",
