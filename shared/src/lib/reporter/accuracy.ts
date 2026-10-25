@@ -54,10 +54,7 @@ function combinedAccuracy(entries: { accuracy: number; weight: number }[]) {
         (sum, accuracy, index) => sum + accuracy * entries[index].weight, 0
     ) / totalWeight;
 
-    const harmonicMean = accuracies.length
-        / accuracies.reduce((sum, accuracy) => sum + 1 / accuracy, 0);
-
-    return (weightedMean + harmonicMean) / 2;
+    return weightedMean;
 }
 
 export function getGameAccuracy(rootNode: StateTreeNode) {
@@ -98,5 +95,5 @@ export function getMoveAccuracy(
         moveColour
     );
 
-    return 103.16 * Math.exp(-4 * pointLoss) - 3.17;
+    return 103.16 * Math.exp(-7 * pointLoss) - 3.17;
 }
