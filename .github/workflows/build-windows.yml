@@ -49,8 +49,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.7
-          name: Release v1.7
+          tag_name: v1.7.1
+          name: Release v1.7.1
           prerelease: false
           make_latest: true
           target_commitish: ${{ github.sha }}
@@ -77,6 +77,8 @@ jobs:
             - Review also marks the board: red squares on the pieces your move attacks and on promotion squares, orange squares on pieces your move newly defends, and a tag naming the theme (for example Defends Pieces) on the square it is about
             - New theme detector, no AI needed: it recognises defending pieces, the opposition, taking or blocking a promotion square, zugzwang and finding the only good move, and names them in the move explanation (White and Black wording). The AI coach also gets the detected themes, and stays optional
             - The evaluation of the position now shows next to the move rating, with mate scores such as -M17
+            - Hotfix: the evaluation graph now uses a win-chance scale like chess.com's, so one huge swing no longer flattens the rest of the line
+            - Hotfix: game accuracy now punishes big mistakes and weights swingy stretches of the game more, so it lands much closer to chess.com's numbers instead of showing about 90 for everyone
 
             OfflineChess.zip - installer, adds a desktop shortcut
             OfflineChess_Portable.zip - single exe, no install
